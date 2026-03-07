@@ -46,6 +46,18 @@ class ChangePasswordView(APIView):
         )
 
 
+class AvatarView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request):
+        user = request.user
+        if user.avatar:
+            user.avatar.delete(save=False)  # removes file from disk
+            user.avatar = None
+            user.save(update_fields=["avatar"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class UserListView(generics.ListAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]

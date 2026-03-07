@@ -43,6 +43,9 @@ export const authApi = {
       .then((r) => r.data);
   },
 
+  removeAvatar: () =>
+    apiClient.delete('/auth/avatar/'),
+
   changePassword: (currentPassword: string, newPassword: string, newPasswordConfirm: string) =>
     apiClient
       .post('/auth/change-password/', {

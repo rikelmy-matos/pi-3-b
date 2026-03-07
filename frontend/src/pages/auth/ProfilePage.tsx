@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import DeleteIcon from '@mui/icons-material/Delete';
 import LockIcon from '@mui/icons-material/Lock';
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '../../api';
@@ -61,6 +62,15 @@ export default function ProfilePage() {
       showToast('Foto atualizada com sucesso.');
     },
     onError: () => showToast('Erro ao enviar foto.', 'error'),
+  });
+
+  const removeAvatarMutation = useMutation({
+    mutationFn: () => authApi.removeAvatar(),
+    onSuccess: async () => {
+      await refreshUser();
+      showToast('Foto removida.');
+    },
+    onError: () => showToast('Erro ao remover foto.', 'error'),
   });
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,7 +139,7 @@ export default function ProfilePage() {
       {/* ── Profile info card ─────────────────────────────────────────────── */}
       <Card elevation={2} sx={{ mb: 3 }}>
         <CardContent>
-          {/* Avatar + upload button */}
+          {/* Avatar + upload/remove buttons */}
           <Box display="flex" alignItems="center" gap={2} mb={3}>
             <Box position="relative">
               <Avatar
@@ -142,7 +152,7 @@ export default function ProfilePage() {
                 <IconButton
                   size="small"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={avatarMutation.isPending}
+                  disabled={avatarMutation.isPending || removeAvatarMutation.isPending}
                   sx={{
                     position: 'absolute',
                     bottom: -4,
@@ -170,13 +180,36 @@ export default function ProfilePage() {
                 onChange={handleAvatarChange}
               />
             </Box>
-            <Box>
+            <Box flex={1}>
               <Typography variant="h6" fontWeight={600}>
                 {user?.full_name || user?.username}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" mb={user?.avatar_url ? 1 : 0}>
                 {user?.email}
               </Typography>
+              {user?.avatar_url && (
+                <Tooltip title="Remover foto">
+                  <span>
+                    <Button
+                      size="small"
+                      color="error"
+                      variant="outlined"
+                      startIcon={
+                        removeAvatarMutation.isPending ? (
+                          <CircularProgress size={12} color="inherit" />
+                        ) : (
+                          <DeleteIcon fontSize="small" />
+                        )
+                      }
+                      disabled={removeAvatarMutation.isPending || avatarMutation.isPending}
+                      onClick={() => removeAvatarMutation.mutate()}
+                      sx={{ borderRadius: 2, fontSize: '0.75rem', py: 0.4 }}
+                    >
+                      Remover foto
+                    </Button>
+                  </span>
+                </Tooltip>
+              )}
             </Box>
           </Box>
 
