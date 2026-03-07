@@ -305,3 +305,21 @@ kubectl logs -n taskmanager deploy/taskmanager-backend
 - `ProjectMember` carries `specialty` (CharField) and `hourly_rate` (DecimalField, nullable)
 - Sub-resources (tech_stack, objectives, risks, milestones) are separate models with UUID PKs,
   all scoped to a `Project` FK and managed via nested URL actions on `ProjectViewSet`
+- `ProjectViewSet` uses `get_permissions()` to apply `IsProjectOwnerOrAdmin` only on
+  `update`/`partial_update`/`destroy`; list/retrieve/create use `IsAuthenticated` only
+- `TaskViewSet.perform_create` enforces project membership before saving (raises 403)
+- `recharts` is NOT installed — dashboard charts use MUI `LinearProgress` bars
+- `DashboardPage` shows 4 stat cards + 2 bar charts (tasks by status, tasks by priority)
+- `ProjectsPage` has search (text) + status filter that pass `?search=` and `?status=` to API
+- Global toast/snackbar via `SnackbarContext` (`src/context/SnackbarContext.tsx`);
+  use `useSnackbar()` hook anywhere in the tree to call `showToast(msg, severity)`
+- `AuthContext` exposes `refreshUser()` to re-fetch and update the current user from the API
+- Profile edit page at `/profile` (`src/pages/auth/ProfilePage.tsx`); edits
+  `first_name`, `last_name`, `bio` via `authApi.updateProfile` then calls `refreshUser()`
+- `KanbanBoard` header has "Ver detalhes do projeto" button (→ `/projects/:id/overview`)
+- `ProjectDetailPage` header has back + "Membros" + "Abrir Kanban" buttons
+- All data tabs in `ProjectDetailPage` show `<Alert severity="error">` on query failure
+- **Backend image has no volume mount** — always run `docker compose build backend` then
+  `docker compose up -d --no-deps backend` after editing backend source, then rerun tests
+  via `docker compose exec backend python manage.py test`
+- **43 backend tests** all pass (projects: 22, tasks: 18, users: 3)
