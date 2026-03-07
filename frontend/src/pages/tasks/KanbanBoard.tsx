@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -114,6 +114,9 @@ function TaskCard({
   onEdit: (t: Task) => void;
 }) {
   const leftColor = PRIORITY_LEFT_COLOR[task.priority] ?? '#9CA3AF';
+  // Track pointer position on mouse-down so we can distinguish a click from a drag.
+  const pointerDown = useRef<{ x: number; y: number } | null>(null);
+
   return (
     <Draggable draggableId={task.id} index={index}>
       {(provided, snapshot) => (
@@ -121,12 +124,22 @@ function TaskCard({
           ref={provided.innerRef}
           {...provided.draggableProps}
           elevation={snapshot.isDragging ? 8 : 0}
+          onMouseDown={(e) => { pointerDown.current = { x: e.clientX, y: e.clientY }; }}
+          onMouseUp={(e) => {
+            if (!pointerDown.current) return;
+            const dx = Math.abs(e.clientX - pointerDown.current.x);
+            const dy = Math.abs(e.clientY - pointerDown.current.y);
+            pointerDown.current = null;
+            // Only treat as a click if the pointer barely moved (not a drag).
+            if (dx < 6 && dy < 6) onEdit(task);
+          }}
           sx={{
             mb: 1.5,
             position: 'relative',
             borderLeft: `4px solid ${leftColor}`,
             borderRadius: '10px',
             bgcolor: 'background.paper',
+            cursor: 'pointer',
             boxShadow: snapshot.isDragging
               ? '0 12px 32px rgba(108,99,255,0.22)'
               : '0 1px 4px rgba(0,0,0,0.08)',
@@ -135,14 +148,13 @@ function TaskCard({
               boxShadow: '0 4px 16px rgba(108,99,255,0.15)',
               transform: 'translateY(-1px)',
             },
-            '&:hover .task-edit-btn': { opacity: 1 },
           }}
         >
           <Box
             {...provided.dragHandleProps}
             sx={{ cursor: 'grab', '&:active': { cursor: 'grabbing' } }}
           >
-            <CardContent sx={{ p: '12px !important', pr: '36px !important' }}>
+            <CardContent sx={{ p: '12px !important' }}>
               <Typography variant="body2" fontWeight={600} mb={0.75} lineHeight={1.4}>
                 {task.title}
               </Typography>
@@ -193,26 +205,6 @@ function TaskCard({
               </Box>
             </CardContent>
           </Box>
-
-          <IconButton
-            className="task-edit-btn"
-            size="small"
-            onClick={(e) => { e.stopPropagation(); onEdit(task); }}
-            aria-label="editar tarefa"
-            sx={{
-              position: 'absolute',
-              top: 4,
-              right: 4,
-              opacity: 0,
-              transition: 'opacity 0.2s',
-              bgcolor: 'background.paper',
-              boxShadow: 1,
-              width: 24,
-              height: 24,
-            }}
-          >
-            <EditIcon sx={{ fontSize: 13 }} />
-          </IconButton>
         </Card>
       )}
     </Draggable>

@@ -60,12 +60,6 @@ import type {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const STATUS_COLOR: Record<string, 'success' | 'warning' | 'default' | 'error'> = {
-  active: 'success',
-  paused: 'warning',
-  completed: 'default',
-  archived: 'error',
-};
 const STATUS_LABEL: Record<string, string> = {
   active: 'Ativo',
   paused: 'Pausado',

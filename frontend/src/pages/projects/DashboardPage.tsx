@@ -23,10 +23,6 @@ import { projectsApi, tasksApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import type { Task } from '../../types';
 
-const PRIORITY_COLOR: Record<string, 'default' | 'info' | 'warning' | 'error'> = {
-  low: 'default', medium: 'info', high: 'warning', critical: 'error',
-};
-
 const PRIORITY_CHIP_BG: Record<string, string> = {
   low: '#E5E7EB',
   medium: '#DBEAFE',
