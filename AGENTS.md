@@ -195,7 +195,9 @@ CREATE DATABASE taskmanager;
 | POST | `/api/v1/auth/register/` | Register new user |
 | POST | `/api/v1/auth/token/` | Login → JWT tokens |
 | POST | `/api/v1/auth/token/refresh/` | Refresh access token |
-| GET/PATCH | `/api/v1/auth/profile/` | Get/update own profile |
+| GET/PATCH | `/api/v1/auth/profile/` | Get/update own profile (supports multipart for avatar upload) |
+| DELETE | `/api/v1/auth/avatar/` | Delete avatar file from disk and clear field |
+| POST | `/api/v1/auth/change-password/` | Change password (current + new + confirm) |
 | GET | `/api/v1/auth/users/` | List other users (for assignment) |
 | GET/POST | `/api/v1/projects/` | List/create projects |
 | GET/PATCH/DELETE | `/api/v1/projects/{id}/` | Project detail |
@@ -314,11 +316,30 @@ kubectl logs -n taskmanager deploy/taskmanager-backend
 - Global toast/snackbar via `SnackbarContext` (`src/context/SnackbarContext.tsx`);
   use `useSnackbar()` hook anywhere in the tree to call `showToast(msg, severity)`
 - `AuthContext` exposes `refreshUser()` to re-fetch and update the current user from the API
+
+### UI Theme (colorful & playful — indigo/violet)
+- MUI theme defined in `App.tsx`; primary `#6C63FF`, secondary `#FF6584`, `borderRadius: 14`
+- Sidebar: solid deep indigo (`#4B44CC`) background, white icons/text, active state vertical indicator
+- Project cards: status-based colored top-accent (`::before` pseudo-element)
+- Kanban columns: `todo` → `#6C63FF`, `in_progress` → `#F59E0B`, `done` → `#22C55E`
+- Task card priority left border: `low` → `#9CA3AF`, `medium` → `#3B82F6`, `high` → `#F59E0B`, `critical` → `#EF4444`
+- `Docker build uses `tsc -b`` (stricter than `--noEmit`) — remove all unused variables before committing
 - Profile edit page at `/profile` (`src/pages/auth/ProfilePage.tsx`); edits
   `first_name`, `last_name`, `bio` via `authApi.updateProfile` then calls `refreshUser()`
+- Avatar upload via `authApi.uploadAvatar(file)` → multipart PATCH to `/auth/profile/`;
+  avatar removal via `authApi.removeAvatar()` → DELETE `/auth/avatar/` (deletes file from disk)
+- `avatar_url` is a read-only `SerializerMethodField` on `UserSerializer` returning the
+  absolute URL; consumed by `<Avatar src={user?.avatar_url}>` in sidebar and ProfilePage
+- Password change via `authApi.changePassword(current, new, confirm)` → POST `/auth/change-password/`;
+  `ChangePasswordSerializer` validates current password and new password match
+- nginx `location ^~ /media/` (with `^~` modifier) proxies user-uploaded media to the backend;
+  `^~` is required so the regex static-asset cache rule (`~* \.(jpg|jpeg|...)$`) does not
+  intercept media requests before they reach the backend
 - `KanbanBoard` header has "Ver detalhes do projeto" button (→ `/projects/:id/overview`)
 - `ProjectDetailPage` header has back + "Membros" + "Abrir Kanban" buttons
 - All data tabs in `ProjectDetailPage` show `<Alert severity="error">` on query failure
+- Clicking a task card on the Kanban board opens the edit dialog; drag vs. click is
+  distinguished by tracking `mousedown` position and checking delta < 6px on `mouseup`
 - **Backend image has no volume mount** — always run `docker compose build backend` then
   `docker compose up -d --no-deps backend` after editing backend source, then rerun tests
   via `docker compose exec backend python manage.py test`
