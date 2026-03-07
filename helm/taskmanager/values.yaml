@@ -1,0 +1,57 @@
+# Default values for taskmanager Helm chart.
+
+# Container registry
+registry: ghcr.io/rikelmy-matos/pi-3-b
+
+backend:
+  image: backend
+  tag: latest
+  replicas: 1
+  port: 8000
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+frontend:
+  image: frontend
+  tag: latest
+  replicas: 1
+  port: 80
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+
+postgres:
+  image: postgres
+  tag: "16-alpine"
+  port: 5432
+  storage: 5Gi
+  storageClass: local-path
+
+ingress:
+  host: sofplan.com.br
+  tlsSecret: sofplan-tls
+  clusterIssuer: letsencrypt-prod
+
+# Non-secret environment config (goes in ConfigMap)
+config:
+  debug: "False"
+  allowedHosts: "sofplan.com.br,www.sofplan.com.br"
+  dbName: taskmanager
+  dbUser: postgres
+  dbHost: postgres
+  dbPort: "5432"
+  corsOrigins: "https://sofplan.com.br,https://www.sofplan.com.br"
+
+# Secret values — override via --set or sealed-secrets in production
+secrets:
+  secretKey: "CHANGE_ME_IN_PRODUCTION"
+  dbPassword: "CHANGE_ME_IN_PRODUCTION"

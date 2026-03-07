@@ -1,0 +1,53 @@
+# Environment files — never commit real secrets
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+env/
+.venv/
+*.egg
+
+# Django
+staticfiles/
+media/
+db.sqlite3
+
+# Coverage / testing
+.coverage
+htmlcov/
+.pytest_cache/
+coverage.xml
+
+# Node
+node_modules/
+
+# Frontend build output
+frontend/dist/
+frontend/dist-ssr/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Ruff cache
+.ruff_cache/
+
+# Misc
+*.log
