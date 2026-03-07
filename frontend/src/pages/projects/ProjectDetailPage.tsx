@@ -21,7 +21,6 @@ import {
   LinearProgress,
   CircularProgress,
   Skeleton,
-  Divider,
   Avatar,
   Stack,
   Paper,
@@ -72,6 +71,13 @@ const STATUS_LABEL: Record<string, string> = {
   paused: 'Pausado',
   completed: 'Concluído',
   archived: 'Arquivado',
+};
+
+const STATUS_BANNER_GRADIENT: Record<string, string> = {
+  active: 'linear-gradient(135deg, #6C63FF 0%, #4B44CC 100%)',
+  paused: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+  completed: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
+  archived: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
 };
 
 const TECH_CATEGORY_LABEL: Record<TechCategory, string> = {
@@ -155,20 +161,8 @@ function OverviewTab({ project }: { project: Project }) {
 
   return (
     <Box>
-      {/* Header row */}
-      <Box display="flex" alignItems="center" gap={2} mb={3} flexWrap="wrap">
-        <Typography variant="h5" fontWeight={700}>
-          {project.name}
-        </Typography>
-        <Chip
-          label={STATUS_LABEL[project.status]}
-          color={STATUS_COLOR[project.status]}
-          size="small"
-        />
-      </Box>
-
       {project.description && (
-        <Typography variant="body1" color="text.secondary" mb={3}>
+        <Typography variant="body1" color="text.secondary" mb={3} lineHeight={1.7}>
           {project.description}
         </Typography>
       )}
@@ -177,32 +171,49 @@ function OverviewTab({ project }: { project: Project }) {
       <Grid container spacing={2} mb={3}>
         {[
           {
-            icon: <TaskAltIcon color="primary" />,
+            icon: <TaskAltIcon sx={{ color: '#6C63FF' }} />,
             label: 'Tarefas',
             value: project.task_count,
+            bg: 'rgba(108,99,255,0.08)',
           },
           {
-            icon: <GroupIcon color="secondary" />,
+            icon: <GroupIcon sx={{ color: '#EC4899' }} />,
             label: 'Membros',
             value: project.members.length,
+            bg: 'rgba(236,72,153,0.08)',
           },
           {
-            icon: <WarningAmberIcon color="error" />,
+            icon: <WarningAmberIcon sx={{ color: '#EF4444' }} />,
             label: 'Riscos Abertos',
             value: openRisks,
+            bg: 'rgba(239,68,68,0.08)',
           },
           {
-            icon: <FlagIcon color="success" />,
+            icon: <FlagIcon sx={{ color: '#22C55E' }} />,
             label: 'Marcos Concluídos',
             value: `${doneMilestones} / ${milestones.length}`,
+            bg: 'rgba(34,197,94,0.08)',
           },
         ].map((stat) => (
           <Grid size={{ xs: 6, sm: 3 }} key={stat.label}>
-            <Card elevation={1}>
-              <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: '12px !important' }}>
-                {stat.icon}
+            <Card elevation={0} sx={{ boxShadow: '0 2px 10px rgba(0,0,0,0.07)' }}>
+              <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: '14px !important' }}>
+                <Box
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 2,
+                    bgcolor: stat.bg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {stat.icon}
+                </Box>
                 <Box>
-                  <Typography variant="h6" fontWeight={700} lineHeight={1}>
+                  <Typography variant="h6" fontWeight={800} lineHeight={1}>
                     {stat.value}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
@@ -218,11 +229,11 @@ function OverviewTab({ project }: { project: Project }) {
       {/* Details */}
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle2" fontWeight={600} mb={1}>
+          <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+            <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
               Informações
             </Typography>
-            <Stack spacing={0.5}>
+            <Stack spacing={0.75}>
               <Typography variant="body2">
                 <strong>Dono:</strong> {project.owner.full_name || project.owner.username}
               </Typography>
@@ -248,17 +259,17 @@ function OverviewTab({ project }: { project: Project }) {
 
         {totalObjs > 0 && (
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Paper variant="outlined" sx={{ p: 2 }}>
-              <Typography variant="subtitle2" fontWeight={600} mb={1}>
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
                 Progresso dos Objetivos
               </Typography>
               <Box display="flex" alignItems="center" gap={1} mb={0.5}>
                 <LinearProgress
                   variant="determinate"
                   value={totalObjs > 0 ? (achievedObjs / totalObjs) * 100 : 0}
-                  sx={{ flex: 1, height: 8, borderRadius: 4 }}
+                  sx={{ flex: 1, height: 10, borderRadius: 5 }}
                 />
-                <Typography variant="caption">
+                <Typography variant="caption" fontWeight={700}>
                   {achievedObjs}/{totalObjs}
                 </Typography>
               </Box>
@@ -1474,43 +1485,113 @@ export default function ProjectDetailPage() {
 
   return (
     <Box>
-      {/* Back button + quick nav */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/projects')}
-          size="small"
-        >
-          Projetos
-        </Button>
-        <Box display="flex" gap={1}>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<PeopleIcon />}
-            onClick={() => navigate(`/projects/${projectId}/members`)}
-          >
-            Membros
-          </Button>
-          <Button
-            size="small"
-            variant="contained"
-            startIcon={<ViewKanbanIcon />}
-            onClick={() => navigate(`/projects/${projectId}`)}
-          >
-            Abrir Kanban
-          </Button>
+      {/* ── Gradient banner header ─────────────────────────────────────────── */}
+      <Box
+        sx={{
+          background: STATUS_BANNER_GRADIENT[project.status] ?? STATUS_BANNER_GRADIENT.active,
+          borderRadius: 3,
+          px: 3,
+          py: 2.5,
+          mb: 3,
+          color: 'white',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            right: -40,
+            top: -40,
+            width: 180,
+            height: 180,
+            borderRadius: '50%',
+            bgcolor: 'rgba(255,255,255,0.08)',
+          },
+        }}
+      >
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2}>
+          <Box>
+            <Button
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate('/projects')}
+              size="small"
+              sx={{ color: 'rgba(255,255,255,0.8)', mb: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' } }}
+            >
+              Projetos
+            </Button>
+            <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
+              <Typography variant="h5" fontWeight={800} sx={{ color: 'white' }}>
+                {project.name}
+              </Typography>
+              <Chip
+                label={STATUS_LABEL[project.status]}
+                size="small"
+                sx={{
+                  bgcolor: 'rgba(255,255,255,0.22)',
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: '0.7rem',
+                  border: '1px solid rgba(255,255,255,0.35)',
+                }}
+              />
+            </Box>
+          </Box>
+          <Box display="flex" gap={1} flexShrink={0} alignSelf="center">
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<PeopleIcon />}
+              onClick={() => navigate(`/projects/${projectId}/members`)}
+              sx={{
+                color: 'white',
+                borderColor: 'rgba(255,255,255,0.5)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.12)', borderColor: 'white' },
+              }}
+            >
+              Membros
+            </Button>
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<ViewKanbanIcon />}
+              onClick={() => navigate(`/projects/${projectId}`)}
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.22)',
+                color: 'white',
+                boxShadow: 'none',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.32)', boxShadow: 'none' },
+              }}
+            >
+              Abrir Kanban
+            </Button>
+          </Box>
         </Box>
       </Box>
 
-      <Divider sx={{ mb: 0 }} />
-
+      {/* ── Tabs ──────────────────────────────────────────────────────────── */}
       <Tabs
         value={tab}
         onChange={(_, v) => setTab(v)}
         variant="scrollable"
         scrollButtons="auto"
-        sx={{ borderBottom: 1, borderColor: 'divider' }}
+        sx={{
+          mb: 0,
+          '& .MuiTabs-root': { minHeight: 44 },
+          '& .MuiTab-root': {
+            textTransform: 'none',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            minHeight: 44,
+            color: 'text.secondary',
+            '&.Mui-selected': { color: 'primary.main', fontWeight: 700 },
+          },
+          '& .MuiTabs-indicator': {
+            height: 3,
+            borderRadius: '3px 3px 0 0',
+            bgcolor: 'primary.main',
+          },
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
       >
         {TABS.map((label) => (
           <Tab key={label} label={label} />

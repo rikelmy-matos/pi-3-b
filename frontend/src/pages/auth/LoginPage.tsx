@@ -51,111 +51,132 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: 'background.default',
+        background: 'linear-gradient(135deg, #F0EFFF 0%, #E8E6FF 50%, #F5F0FF 100%)',
         px: 2,
       }}
     >
       <Box sx={{ width: '100%', maxWidth: 420 }}>
-        {/* Logo / branding */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 4,
+            overflow: 'hidden',
+            boxShadow: '0 20px 60px rgba(108,99,255,0.18)',
+          }}
+        >
+          {/* Gradient header */}
           <Box
             sx={{
-              width: 56,
-              height: 56,
-              borderRadius: 2,
-              bgcolor: 'primary.main',
+              background: 'linear-gradient(135deg, #6C63FF 0%, #4B44CC 100%)',
+              px: 4,
+              pt: 4,
+              pb: 3,
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              mb: 2,
             }}
           >
-            <TaskAltIcon sx={{ color: '#fff', fontSize: 32 }} />
-          </Box>
-          <Typography variant="h5" fontWeight={700} textAlign="center">
-            Task Manager
-          </Typography>
-          <Typography variant="body2" color="text.secondary" textAlign="center" mt={0.5}>
-            PROMINESS LTDA
-          </Typography>
-        </Box>
-
-        <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
-          <Typography variant="h6" fontWeight={600} mb={0.5}>
-            Bem-vindo de volta
-          </Typography>
-          <Typography variant="body2" color="text.secondary" mb={3}>
-            Entre na sua conta para continuar
-          </Typography>
-
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          <Box component="form" onSubmit={handleSubmit} noValidate>
-            <TextField
-              label="E-mail"
-              type="email"
-              fullWidth
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              sx={{ mb: 2 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <EmailOutlinedIcon fontSize="small" color="action" />
-                  </InputAdornment>
-                ),
+            <Box
+              sx={{
+                width: 56,
+                height: 56,
+                borderRadius: 3,
+                bgcolor: 'rgba(255,255,255,0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mb: 2,
+                backdropFilter: 'blur(4px)',
               }}
-            />
-            <TextField
-              label="Senha"
-              type={showPassword ? 'text' : 'password'}
-              fullWidth
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              sx={{ mb: 3 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <LockOutlinedIcon fontSize="small" color="action" />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword((v) => !v)}
-                      edge="end"
-                      size="small"
-                    >
-                      {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              fullWidth
-              disabled={loading}
-              size="large"
-              sx={{ py: 1.5, fontWeight: 600 }}
             >
-              {loading ? <CircularProgress size={22} color="inherit" /> : 'Entrar'}
-            </Button>
+              <TaskAltIcon sx={{ color: '#fff', fontSize: 32 }} />
+            </Box>
+            <Typography variant="h5" fontWeight={800} sx={{ color: 'white' }} textAlign="center">
+              Task Manager
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)' }} textAlign="center" mt={0.5}>
+              PROMINESS LTDA
+            </Typography>
           </Box>
 
-          <Typography variant="body2" mt={3} textAlign="center" color="text.secondary">
-            Não tem conta?{' '}
-            <Link to="/register" style={{ color: '#1976d2', fontWeight: 600, textDecoration: 'none' }}>
-              Cadastre-se
-            </Link>
-          </Typography>
+          {/* Form section */}
+          <Box sx={{ px: 4, py: 3.5 }}>
+            <Typography variant="h6" fontWeight={700} mb={0.5}>
+              Bem-vindo de volta
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mb={3}>
+              Entre na sua conta para continuar
+            </Typography>
+
+            {error && (
+              <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+                {error}
+              </Alert>
+            )}
+
+            <Box component="form" onSubmit={handleSubmit} noValidate>
+              <TextField
+                label="E-mail"
+                type="email"
+                fullWidth
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                sx={{ mb: 2 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <EmailOutlinedIcon fontSize="small" color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <TextField
+                label="Senha"
+                type={showPassword ? 'text' : 'password'}
+                fullWidth
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                sx={{ mb: 3 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LockOutlinedIcon fontSize="small" color="action" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword((v) => !v)}
+                        edge="end"
+                        size="small"
+                      >
+                        {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth
+                disabled={loading}
+                size="large"
+                sx={{ py: 1.5, fontWeight: 700, fontSize: '1rem' }}
+              >
+                {loading ? <CircularProgress size={22} color="inherit" /> : 'Entrar'}
+              </Button>
+            </Box>
+
+            <Typography variant="body2" mt={3} textAlign="center" color="text.secondary">
+              Não tem conta?{' '}
+              <Link to="/register" style={{ color: '#6C63FF', fontWeight: 700, textDecoration: 'none' }}>
+                Cadastre-se
+              </Link>
+            </Typography>
+          </Box>
         </Paper>
       </Box>
     </Box>

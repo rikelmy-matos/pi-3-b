@@ -47,14 +47,14 @@ import type { Task, TaskPriority, KanbanColumn, TaskActivity } from '../../types
 
 // ── Colour palette for column picker ─────────────────────────────────────────
 const COLUMN_COLORS = [
-  '#1976d2', '#ed6c02', '#2e7d32', '#9c27b0',
-  '#d32f2f', '#0288d1', '#388e3c', '#f57c00',
+  '#6C63FF', '#F59E0B', '#22C55E', '#EC4899',
+  '#EF4444', '#0EA5E9', '#8B5CF6', '#14B8A6',
 ];
 
 const DEFAULT_COLUMNS = [
-  { name: 'A Fazer', slug: 'todo', color: '#1976d2', order: 0 },
-  { name: 'Em Andamento', slug: 'in_progress', color: '#ed6c02', order: 1 },
-  { name: 'Concluído', slug: 'done', color: '#2e7d32', order: 2 },
+  { name: 'A Fazer', slug: 'todo', color: '#6C63FF', order: 0 },
+  { name: 'Em Andamento', slug: 'in_progress', color: '#F59E0B', order: 1 },
+  { name: 'Concluído', slug: 'done', color: '#22C55E', order: 2 },
 ];
 
 const PRIORITY_COLOR: Record<string, 'default' | 'info' | 'warning' | 'error'> = {
@@ -69,6 +69,13 @@ const PRIORITY_LABEL: Record<string, string> = {
   medium: 'Média',
   high: 'Alta',
   critical: 'Crítica',
+};
+
+const PRIORITY_LEFT_COLOR: Record<string, string> = {
+  low: '#9CA3AF',
+  medium: '#3B82F6',
+  high: '#F59E0B',
+  critical: '#EF4444',
 };
 
 const ACTION_LABEL: Record<string, string> = {
@@ -106,16 +113,28 @@ function TaskCard({
   index: number;
   onEdit: (t: Task) => void;
 }) {
+  const leftColor = PRIORITY_LEFT_COLOR[task.priority] ?? '#9CA3AF';
   return (
     <Draggable draggableId={task.id} index={index}>
       {(provided, snapshot) => (
         <Card
           ref={provided.innerRef}
           {...provided.draggableProps}
-          elevation={snapshot.isDragging ? 6 : 1}
+          elevation={snapshot.isDragging ? 8 : 0}
           sx={{
-            mb: 1,
+            mb: 1.5,
             position: 'relative',
+            borderLeft: `4px solid ${leftColor}`,
+            borderRadius: '10px',
+            bgcolor: 'background.paper',
+            boxShadow: snapshot.isDragging
+              ? '0 12px 32px rgba(108,99,255,0.22)'
+              : '0 1px 4px rgba(0,0,0,0.08)',
+            transition: 'box-shadow 0.18s, transform 0.12s',
+            '&:hover': {
+              boxShadow: '0 4px 16px rgba(108,99,255,0.15)',
+              transform: 'translateY(-1px)',
+            },
             '&:hover .task-edit-btn': { opacity: 1 },
           }}
         >
@@ -124,7 +143,7 @@ function TaskCard({
             sx={{ cursor: 'grab', '&:active': { cursor: 'grabbing' } }}
           >
             <CardContent sx={{ p: '12px !important', pr: '36px !important' }}>
-              <Typography variant="body2" fontWeight={600} mb={1}>
+              <Typography variant="body2" fontWeight={600} mb={0.75} lineHeight={1.4}>
                 {task.title}
               </Typography>
               {task.description && (
@@ -137,6 +156,7 @@ function TaskCard({
                     WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
                     mb: 1,
+                    lineHeight: 1.5,
                   }}
                 >
                   {task.description}
@@ -147,17 +167,24 @@ function TaskCard({
                   label={PRIORITY_LABEL[task.priority]}
                   color={PRIORITY_COLOR[task.priority]}
                   size="small"
-                  sx={{ fontSize: 10 }}
+                  sx={{ fontSize: 10, fontWeight: 700, height: 20 }}
                 />
                 <Box display="flex" alignItems="center" gap={0.5}>
                   {task.due_date && (
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
                       {new Date(task.due_date).toLocaleDateString('pt-BR')}
                     </Typography>
                   )}
                   {task.assignee && (
                     <Tooltip title={task.assignee.full_name}>
-                      <Avatar sx={{ width: 22, height: 22, fontSize: 11 }}>
+                      <Avatar
+                        sx={{
+                          width: 22,
+                          height: 22,
+                          fontSize: 11,
+                          bgcolor: 'primary.main',
+                        }}
+                      >
                         {task.assignee.first_name?.[0]?.toUpperCase()}
                       </Avatar>
                     </Tooltip>
@@ -180,9 +207,11 @@ function TaskCard({
               transition: 'opacity 0.2s',
               bgcolor: 'background.paper',
               boxShadow: 1,
+              width: 24,
+              height: 24,
             }}
           >
-            <EditIcon sx={{ fontSize: 14 }} />
+            <EditIcon sx={{ fontSize: 13 }} />
           </IconButton>
         </Card>
       )}
@@ -412,34 +441,68 @@ export default function KanbanBoard() {
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5" fontWeight={700}>
-          {project?.name ?? 'Kanban'}
-        </Typography>
-        <Box display="flex" gap={1}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box>
+          <Typography variant="h5" fontWeight={800} color="text.primary">
+            {project?.name ?? 'Kanban'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Quadro de tarefas
+          </Typography>
+        </Box>
+        <Box display="flex" gap={1} alignItems="center">
           <Tooltip title="Gerenciar colunas">
-            <IconButton onClick={() => setColumnsOpen(true)}>
-              <ViewColumnIcon />
+            <IconButton
+              onClick={() => setColumnsOpen(true)}
+              sx={{
+                bgcolor: 'rgba(108,99,255,0.08)',
+                '&:hover': { bgcolor: 'rgba(108,99,255,0.16)' },
+              }}
+            >
+              <ViewColumnIcon sx={{ color: 'primary.main' }} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Ver detalhes do projeto">
-            <IconButton onClick={() => navigate(`/projects/${projectId}/overview`)}>
-              <InfoOutlinedIcon />
+            <IconButton
+              onClick={() => navigate(`/projects/${projectId}/overview`)}
+              sx={{
+                bgcolor: 'rgba(108,99,255,0.08)',
+                '&:hover': { bgcolor: 'rgba(108,99,255,0.16)' },
+              }}
+            >
+              <InfoOutlinedIcon sx={{ color: 'primary.main' }} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Membros do projeto">
-            <IconButton onClick={() => navigate(`/projects/${projectId}/members`)}>
-              <PeopleIcon />
+            <IconButton
+              onClick={() => navigate(`/projects/${projectId}/members`)}
+              sx={{
+                bgcolor: 'rgba(108,99,255,0.08)',
+                '&:hover': { bgcolor: 'rgba(108,99,255,0.16)' },
+              }}
+            >
+              <PeopleIcon sx={{ color: 'primary.main' }} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Histórico de atividades">
-            <IconButton onClick={() => setActivityOpen(true)}>
+            <IconButton
+              onClick={() => setActivityOpen(true)}
+              sx={{
+                bgcolor: 'rgba(108,99,255,0.08)',
+                '&:hover': { bgcolor: 'rgba(108,99,255,0.16)' },
+              }}
+            >
               <Badge badgeContent={unreadActivity > 0 ? unreadActivity : undefined} color="primary" max={99}>
-                <HistoryIcon />
+                <HistoryIcon sx={{ color: 'primary.main' }} />
               </Badge>
             </IconButton>
           </Tooltip>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setNewTaskOpen(true)}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setNewTaskOpen(true)}
+            sx={{ px: 2.5 }}
+          >
             Nova Tarefa
           </Button>
         </Box>
@@ -449,29 +512,34 @@ export default function KanbanBoard() {
       <DragDropContext onDragEnd={onDragEnd}>
         <Box display="flex" gap={2} overflow="auto" pb={2} flex={1}>
           {orderedCols.map((col) => (
-            <Box key={col.id} sx={{ minWidth: 280, flex: '0 0 280px' }}>
+            <Box key={col.id} sx={{ minWidth: 290, flex: '0 0 290px' }}>
               {/* Column header */}
               <Box
                 sx={{
                   bgcolor: col.color,
                   color: 'white',
-                  p: '8px 12px',
-                  borderRadius: '8px 8px 0 0',
+                  p: '10px 14px',
+                  borderRadius: '12px 12px 0 0',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                 }}
               >
-                <Typography variant="subtitle2" fontWeight={700} noWrap>
+                <Typography variant="subtitle2" fontWeight={800} noWrap letterSpacing={0.3}>
                   {col.name}
                 </Typography>
-                <Box display="flex" alignItems="center" gap={0.5}>
-                  <Chip
-                    label={tasksByCol(col.slug).length}
-                    size="small"
-                    sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: 'white', fontWeight: 700 }}
-                  />
-                </Box>
+                <Chip
+                  label={tasksByCol(col.slug).length}
+                  size="small"
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.25)',
+                    color: 'white',
+                    fontWeight: 800,
+                    fontSize: '0.72rem',
+                    height: 22,
+                    minWidth: 28,
+                  }}
+                />
               </Box>
 
               {/* Droppable area */}
@@ -482,10 +550,15 @@ export default function KanbanBoard() {
                     {...provided.droppableProps}
                     sx={{
                       minHeight: 400,
-                      bgcolor: snapshot.isDraggingOver ? '#e3f2fd' : '#f5f5f5',
-                      p: 1,
-                      borderRadius: '0 0 8px 8px',
-                      transition: 'background-color 0.2s',
+                      bgcolor: snapshot.isDraggingOver
+                        ? 'rgba(108,99,255,0.07)'
+                        : 'rgba(240,239,255,0.6)',
+                      p: 1.25,
+                      borderRadius: '0 0 12px 12px',
+                      border: snapshot.isDraggingOver
+                        ? '2px dashed rgba(108,99,255,0.35)'
+                        : '2px solid transparent',
+                      transition: 'background-color 0.2s, border-color 0.2s',
                     }}
                   >
                     {tasksByCol(col.slug).map((task, index) => (
@@ -505,7 +578,17 @@ export default function KanbanBoard() {
               startIcon={<AddIcon />}
               onClick={() => setAddColOpen(true)}
               fullWidth
-              sx={{ borderStyle: 'dashed', borderRadius: 2, py: 1.5 }}
+              sx={{
+                borderStyle: 'dashed',
+                borderRadius: 3,
+                py: 1.5,
+                borderColor: 'rgba(108,99,255,0.4)',
+                color: 'primary.main',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  bgcolor: 'rgba(108,99,255,0.06)',
+                },
+              }}
             >
               Nova Coluna
             </Button>
@@ -687,7 +770,7 @@ export default function KanbanBoard() {
                 sx={{
                   width: 28, height: 28, borderRadius: '50%', bgcolor: c,
                   cursor: 'pointer',
-                  outline: addColForm.color === c ? '3px solid #1976d2' : 'none',
+                  outline: addColForm.color === c ? '3px solid #6C63FF' : 'none',
                   outlineOffset: 2,
                 }}
               />
@@ -732,7 +815,7 @@ export default function KanbanBoard() {
                 sx={{
                   width: 28, height: 28, borderRadius: '50%', bgcolor: c,
                   cursor: 'pointer',
-                  outline: editColForm.color === c ? '3px solid #1976d2' : 'none',
+                  outline: editColForm.color === c ? '3px solid #6C63FF' : 'none',
                   outlineOffset: 2,
                 }}
               />

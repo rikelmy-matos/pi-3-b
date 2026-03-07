@@ -26,22 +26,37 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SearchIcon from '@mui/icons-material/Search';
+import FolderIcon from '@mui/icons-material/Folder';
 import { projectsApi } from '../../api';
 import { useSnackbar } from '../../context/SnackbarContext';
 import type { Project, ProjectStatus } from '../../types';
-
-const STATUS_COLOR: Record<string, 'success' | 'warning' | 'default' | 'error'> = {
-  active: 'success',
-  paused: 'warning',
-  completed: 'default',
-  archived: 'error',
-};
 
 const STATUS_LABEL: Record<string, string> = {
   active: 'Ativo',
   paused: 'Pausado',
   completed: 'Concluído',
   archived: 'Arquivado',
+};
+
+const STATUS_CHIP_BG: Record<string, string> = {
+  active: '#DCFCE7',
+  paused: '#FEF3C7',
+  completed: '#EDE9FE',
+  archived: '#FEE2E2',
+};
+
+const STATUS_CHIP_COLOR: Record<string, string> = {
+  active: '#166534',
+  paused: '#92400E',
+  completed: '#5B21B6',
+  archived: '#991B1B',
+};
+
+const STATUS_CARD_ACCENT: Record<string, string> = {
+  active: '#22C55E',
+  paused: '#F59E0B',
+  completed: '#6C63FF',
+  archived: '#EF4444',
 };
 
 interface EditProjectForm {
@@ -62,18 +77,54 @@ function ProjectCard({
   onDelete: (p: Project) => void;
 }) {
   const navigate = useNavigate();
+  const accent = STATUS_CARD_ACCENT[project.status] ?? '#6C63FF';
   return (
-    <Card elevation={2} sx={{ position: 'relative', '&:hover .card-actions': { opacity: 1 } }}>
-      <CardActionArea onClick={() => navigate(`/projects/${project.id}`)}>
-        <CardContent sx={{ pb: '12px !important' }}>
+    <Card
+      elevation={0}
+      sx={{
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'transform 0.18s, box-shadow 0.18s',
+        '&:hover': {
+          transform: 'translateY(-3px)',
+          boxShadow: '0 12px 32px rgba(108,99,255,0.18)',
+        },
+        '&:hover .card-actions': { opacity: 1 },
+        // Top accent bar
+        '&::before': {
+          content: '""',
+          display: 'block',
+          height: 5,
+          bgcolor: accent,
+          background: `linear-gradient(90deg, ${accent}, ${accent}99)`,
+          borderRadius: '16px 16px 0 0',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+        },
+      }}
+    >
+      <CardActionArea
+        onClick={() => navigate(`/projects/${project.id}`)}
+        sx={{ pt: '5px', borderRadius: 0 }}
+      >
+        <CardContent sx={{ pb: '12px !important', pt: 2 }}>
           <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-            <Typography variant="h6" fontWeight={600} noWrap sx={{ maxWidth: '70%' }}>
+            <Typography variant="subtitle1" fontWeight={700} noWrap sx={{ maxWidth: '68%' }}>
               {project.name}
             </Typography>
             <Chip
               label={STATUS_LABEL[project.status]}
-              color={STATUS_COLOR[project.status]}
               size="small"
+              sx={{
+                bgcolor: STATUS_CHIP_BG[project.status],
+                color: STATUS_CHIP_COLOR[project.status],
+                fontWeight: 700,
+                fontSize: '0.7rem',
+                border: 'none',
+                flexShrink: 0,
+              }}
             />
           </Box>
           <Typography
@@ -86,14 +137,27 @@ function ProjectCard({
               overflow: 'hidden',
               mb: 2,
               minHeight: 40,
+              lineHeight: 1.5,
             }}
           >
             {project.description || 'Sem descrição.'}
           </Typography>
-          <Box display="flex" gap={2}>
-            <Typography variant="caption" color="text.secondary">
-              {project.task_count} tarefas
-            </Typography>
+          <Box display="flex" gap={2} alignItems="center">
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                bgcolor: 'rgba(108,99,255,0.08)',
+                px: 1,
+                py: 0.35,
+                borderRadius: 2,
+              }}
+            >
+              <Typography variant="caption" color="primary" fontWeight={700}>
+                {project.task_count} tarefas
+              </Typography>
+            </Box>
             {project.due_date && (
               <Typography variant="caption" color="text.secondary">
                 Prazo: {new Date(project.due_date).toLocaleDateString('pt-BR')}
@@ -110,7 +174,13 @@ function ProjectCard({
           variant="text"
           startIcon={<InfoOutlinedIcon fontSize="small" />}
           onClick={() => navigate(`/projects/${project.id}/overview`)}
-          sx={{ textTransform: 'none', color: 'text.secondary' }}
+          sx={{
+            textTransform: 'none',
+            color: 'primary.main',
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            '&:hover': { bgcolor: 'rgba(108,99,255,0.08)' },
+          }}
         >
           Ver Detalhes
         </Button>
@@ -121,15 +191,16 @@ function ProjectCard({
         className="card-actions"
         sx={{
           position: 'absolute',
-          top: 6,
-          right: 6,
+          top: 10,
+          right: 8,
           display: 'flex',
           gap: 0.5,
           opacity: 0,
           transition: 'opacity 0.2s',
           bgcolor: 'background.paper',
-          borderRadius: 1,
-          boxShadow: 1,
+          borderRadius: 2,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+          p: 0.25,
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -137,6 +208,7 @@ function ProjectCard({
           size="small"
           onClick={() => onEdit(project)}
           aria-label="editar projeto"
+          sx={{ '&:hover': { color: 'primary.main' } }}
         >
           <EditIcon fontSize="small" />
         </IconButton>
@@ -237,14 +309,20 @@ export default function ProjectsPage() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5" fontWeight={700}>
-          Projetos
-        </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box>
+          <Typography variant="h5" color="text.primary" mb={0.25}>
+            Projetos
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {data?.count ?? 0} projeto{(data?.count ?? 0) !== 1 ? 's' : ''} encontrado{(data?.count ?? 0) !== 1 ? 's' : ''}
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => navigate('/projects/new')}
+          sx={{ px: 2.5 }}
         >
           Novo Projeto
         </Button>
@@ -257,11 +335,18 @@ export default function ProjectsPage() {
           placeholder="Buscar projetos..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          sx={{ flex: 1, minWidth: 200 }}
+          sx={{
+            flex: 1,
+            minWidth: 200,
+            '& .MuiOutlinedInput-root': {
+              bgcolor: 'background.paper',
+              borderRadius: 3,
+            },
+          }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon fontSize="small" />
+                <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
               </InputAdornment>
             ),
           }}
@@ -272,7 +357,13 @@ export default function ProjectsPage() {
           label="Status"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          sx={{ minWidth: 150 }}
+          sx={{
+            minWidth: 150,
+            '& .MuiOutlinedInput-root': {
+              bgcolor: 'background.paper',
+              borderRadius: 3,
+            },
+          }}
         >
           <MenuItem value="">Todos</MenuItem>
           <MenuItem value="active">Ativo</MenuItem>
@@ -282,11 +373,11 @@ export default function ProjectsPage() {
         </TextField>
       </Box>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={2.5}>
         {isLoading
           ? Array.from({ length: 6 }).map((_, i) => (
               <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
-                <Skeleton variant="rectangular" height={160} sx={{ borderRadius: 2 }} />
+                <Skeleton variant="rectangular" height={180} sx={{ borderRadius: 4 }} />
               </Grid>
             ))
           : data?.results.map((project) => (
@@ -300,13 +391,19 @@ export default function ProjectsPage() {
             ))}
         {!isLoading && data?.results.length === 0 && (
           <Grid size={12}>
-            <Box textAlign="center" py={8}>
-              <Typography color="text.secondary" mb={2}>
-                Nenhum projeto encontrado.
+            <Box textAlign="center" py={10}>
+              <FolderIcon sx={{ fontSize: 56, color: 'rgba(108,99,255,0.25)', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" mb={1} fontWeight={600}>
+                Nenhum projeto encontrado
               </Typography>
-              <Button variant="outlined" onClick={() => navigate('/projects/new')}>
-                Criar primeiro projeto
-              </Button>
+              <Typography variant="body2" color="text.secondary" mb={3}>
+                {search || statusFilter ? 'Tente ajustar os filtros.' : 'Crie seu primeiro projeto para começar.'}
+              </Typography>
+              {!search && !statusFilter && (
+                <Button variant="contained" onClick={() => navigate('/projects/new')}>
+                  Criar primeiro projeto
+                </Button>
+              )}
             </Box>
           </Grid>
         )}
