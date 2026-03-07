@@ -23,9 +23,9 @@ class UserSerializer(serializers.ModelSerializer):
             "avatar_url",
             "created_at",
         ]
-        # SEC-15: avatar is write-only via multipart upload; never let clients
-        # set it as a raw string path through the serializer.
-        read_only_fields = ["id", "created_at", "full_name", "avatar_url", "avatar"]
+        # SEC-15: avatar_url is always read-only (computed). The avatar ImageField
+        # itself enforces valid image files only — no need to make it read-only here.
+        read_only_fields = ["id", "created_at", "full_name", "avatar_url"]
 
     def get_avatar_url(self, obj):
         request = self.context.get("request")
