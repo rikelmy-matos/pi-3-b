@@ -19,12 +19,15 @@ import {
   TextField,
   MenuItem,
   CircularProgress,
+  InputAdornment,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import SearchIcon from '@mui/icons-material/Search';
 import { projectsApi } from '../../api';
+import { useSnackbar } from '../../context/SnackbarContext';
 import type { Project, ProjectStatus } from '../../types';
 
 const STATUS_COLOR: Record<string, 'success' | 'warning' | 'default' | 'error'> = {
@@ -153,6 +156,11 @@ function ProjectCard({
 export default function ProjectsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { showToast } = useSnackbar();
+
+  // Search / filter state
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   // Edit dialog state
   const [editProject, setEditProject] = useState<Project | null>(null);
@@ -168,8 +176,13 @@ export default function ProjectsPage() {
   const [deleteProject, setDeleteProject] = useState<Project | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['projects'],
-    queryFn: () => projectsApi.list(),
+    queryKey: ['projects', search, statusFilter],
+    queryFn: () => {
+      const params: Record<string, string> = {};
+      if (search) params.search = search;
+      if (statusFilter) params.status = statusFilter;
+      return projectsApi.list(params);
+    },
   });
 
   const updateMutation = useMutation({
@@ -178,7 +191,9 @@ export default function ProjectsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       setEditProject(null);
+      showToast('Projeto atualizado com sucesso.');
     },
+    onError: () => showToast('Erro ao atualizar projeto.', 'error'),
   });
 
   const deleteMutation = useMutation({
@@ -186,9 +201,10 @@ export default function ProjectsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       setDeleteProject(null);
+      showToast('Projeto excluído.', 'info');
     },
+    onError: () => showToast('Erro ao excluir projeto.', 'error'),
   });
-
   const handleOpenEdit = (project: Project) => {
     setEditProject(project);
     setEditForm({
@@ -221,7 +237,7 @@ export default function ProjectsPage() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h5" fontWeight={700}>
           Projetos
         </Typography>
@@ -232,6 +248,38 @@ export default function ProjectsPage() {
         >
           Novo Projeto
         </Button>
+      </Box>
+
+      {/* Search + filter bar */}
+      <Box display="flex" gap={2} mb={3} flexWrap="wrap">
+        <TextField
+          size="small"
+          placeholder="Buscar projetos..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          sx={{ flex: 1, minWidth: 200 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <TextField
+          select
+          size="small"
+          label="Status"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          sx={{ minWidth: 150 }}
+        >
+          <MenuItem value="">Todos</MenuItem>
+          <MenuItem value="active">Ativo</MenuItem>
+          <MenuItem value="paused">Pausado</MenuItem>
+          <MenuItem value="completed">Concluído</MenuItem>
+          <MenuItem value="archived">Arquivado</MenuItem>
+        </TextField>
       </Box>
 
       <Grid container spacing={2}>

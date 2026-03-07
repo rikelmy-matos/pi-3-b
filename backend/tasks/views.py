@@ -51,6 +51,16 @@ class TaskViewSet(viewsets.ModelViewSet):
         return TaskSerializer
 
     def perform_create(self, serializer):
+        from rest_framework.exceptions import PermissionDenied
+
+        project = serializer.validated_data.get("project")
+        if (
+            project
+            and not ProjectMember.objects.filter(
+                project=project, user=self.request.user
+            ).exists()
+        ):
+            raise PermissionDenied("You are not a member of this project.")
         task = serializer.save()
         TaskActivity.objects.create(
             task=task,

@@ -40,7 +40,9 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import PersonRemoveIcon from '@mui/icons-material/PersonRemove';
 import AddTaskIcon from '@mui/icons-material/AddTask';
 import PeopleIcon from '@mui/icons-material/People';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { projectsApi, tasksApi, columnsApi, activityApi } from '../../api';
+import { useSnackbar } from '../../context/SnackbarContext';
 import type { Task, TaskPriority, KanbanColumn, TaskActivity } from '../../types';
 
 // ── Colour palette for column picker ─────────────────────────────────────────
@@ -193,6 +195,7 @@ export default function KanbanBoard() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { showToast } = useSnackbar();
 
   // ── Drawer state ─────────────────────────────────────────────────────────
   const [activityOpen, setActivityOpen] = useState(false);
@@ -276,7 +279,9 @@ export default function KanbanBoard() {
       queryClient.invalidateQueries({ queryKey: ['activity', projectId] });
       setNewTaskOpen(false);
       setNewTaskForm({ title: '', description: '', priority: 'medium', due_date: '', assignee_id: '' });
+      showToast('Tarefa criada com sucesso.');
     },
+    onError: () => showToast('Erro ao criar tarefa.', 'error'),
   });
 
   const updateMutation = useMutation({
@@ -286,7 +291,9 @@ export default function KanbanBoard() {
       queryClient.invalidateQueries({ queryKey: ['activity', projectId] });
       setEditTask(null);
       setConfirmDeleteTask(false);
+      showToast('Tarefa atualizada.');
     },
+    onError: () => showToast('Erro ao atualizar tarefa.', 'error'),
   });
 
   const deleteMutation = useMutation({
@@ -295,7 +302,9 @@ export default function KanbanBoard() {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
       setEditTask(null);
       setConfirmDeleteTask(false);
+      showToast('Tarefa excluída.', 'info');
     },
+    onError: () => showToast('Erro ao excluir tarefa.', 'error'),
   });
 
   // ── Column mutations ──────────────────────────────────────────────────────
@@ -305,7 +314,9 @@ export default function KanbanBoard() {
       queryClient.invalidateQueries({ queryKey: ['columns', projectId] });
       setAddColOpen(false);
       setAddColForm({ name: '', color: COLUMN_COLORS[0] });
+      showToast('Coluna adicionada.');
     },
+    onError: () => showToast('Erro ao adicionar coluna.', 'error'),
   });
 
   const updateColMutation = useMutation({
@@ -314,7 +325,9 @@ export default function KanbanBoard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['columns', projectId] });
       setEditCol(null);
+      showToast('Coluna atualizada.');
     },
+    onError: () => showToast('Erro ao atualizar coluna.', 'error'),
   });
 
   const deleteColMutation = useMutation({
@@ -323,7 +336,9 @@ export default function KanbanBoard() {
       queryClient.invalidateQueries({ queryKey: ['columns', projectId] });
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
       setConfirmDeleteCol(null);
+      showToast('Coluna excluída.', 'info');
     },
+    onError: () => showToast('Erro ao excluir coluna.', 'error'),
   });
 
   // ── Activity detail dialog state ─────────────────────────────────────────
@@ -405,6 +420,11 @@ export default function KanbanBoard() {
           <Tooltip title="Gerenciar colunas">
             <IconButton onClick={() => setColumnsOpen(true)}>
               <ViewColumnIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Ver detalhes do projeto">
+            <IconButton onClick={() => navigate(`/projects/${projectId}/overview`)}>
+              <InfoOutlinedIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title="Membros do projeto">

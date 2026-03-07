@@ -27,6 +27,7 @@ import {
   Paper,
   Checkbox,
   FormControlLabel,
+  Alert,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
@@ -37,8 +38,11 @@ import GroupIcon from '@mui/icons-material/Group';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import FlagIcon from '@mui/icons-material/Flag';
+import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
+import PeopleIcon from '@mui/icons-material/People';
 import { projectsApi, authApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import { useSnackbar } from '../../context/SnackbarContext';
 import type {
   Project,
   ProjectBudget,
@@ -272,7 +276,8 @@ function OverviewTab({ project }: { project: Project }) {
 
 function BudgetTab({ projectId }: { projectId: string }) {
   const qc = useQueryClient();
-  const { data: budget, isLoading } = useQuery({
+  const { showToast } = useSnackbar();
+  const { data: budget, isLoading, isError } = useQuery({
     queryKey: ['project-budget', projectId],
     queryFn: () => projectsApi.getBudget(projectId).catch(() => null),
   });
@@ -291,7 +296,9 @@ function BudgetTab({ projectId }: { projectId: string }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['project-budget', projectId] });
       setEditing(false);
+      showToast('Orçamento salvo com sucesso.');
     },
+    onError: () => showToast('Erro ao salvar orçamento.', 'error'),
   });
 
   const startEdit = () => {
@@ -305,6 +312,7 @@ function BudgetTab({ projectId }: { projectId: string }) {
   };
 
   if (isLoading) return <Skeleton height={200} />;
+  if (isError) return <Alert severity="error">Erro ao carregar orçamento.</Alert>;
 
   const symbol = CURRENCY_SYMBOL[budget?.currency ?? 'BRL'];
   const est = parseFloat(budget?.estimated_cost ?? '0') || 0;
@@ -466,6 +474,7 @@ function TeamTab({
   canManage: boolean;
 }) {
   const qc = useQueryClient();
+  const { showToast } = useSnackbar();
   const [editMember, setEditMember] = useState<ProjectMember | null>(null);
   const [memberForm, setMemberForm] = useState({ specialty: '', hourly_rate: '', role: 'member' as MemberRole });
 
@@ -483,12 +492,18 @@ function TeamTab({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['project', project.id] });
       setEditMember(null);
+      showToast('Membro atualizado.');
     },
+    onError: () => showToast('Erro ao atualizar membro.', 'error'),
   });
 
   const removeMutation = useMutation({
     mutationFn: (userId: number) => projectsApi.removeMember(project.id, userId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['project', project.id] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['project', project.id] });
+      showToast('Membro removido.', 'info');
+    },
+    onError: () => showToast('Erro ao remover membro.', 'error'),
   });
 
   const addMutation = useMutation({
@@ -498,7 +513,9 @@ function TeamTab({
       setAddOpen(false);
       setSearchEmail('');
       setSearchResults([]);
+      showToast('Membro adicionado ao projeto.');
     },
+    onError: () => showToast('Erro ao adicionar membro.', 'error'),
   });
 
   const handleSearch = async () => {
@@ -675,7 +692,8 @@ const TECH_CATEGORIES: TechCategory[] = ['backend', 'frontend', 'database', 'inf
 
 function TechStackTab({ projectId }: { projectId: string }) {
   const qc = useQueryClient();
-  const { data: items = [], isLoading } = useQuery({
+  const { showToast } = useSnackbar();
+  const { data: items = [], isLoading, isError } = useQuery({
     queryKey: ['project-tech', projectId],
     queryFn: () => projectsApi.listTechStack(projectId),
   });
@@ -703,15 +721,22 @@ function TechStackTab({ projectId }: { projectId: string }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['project-tech', projectId] });
       setDialogOpen(false);
+      showToast(editing ? 'Tecnologia atualizada.' : 'Tecnologia adicionada.');
     },
+    onError: () => showToast('Erro ao salvar tecnologia.', 'error'),
   });
 
   const removeMutation = useMutation({
     mutationFn: (id: string) => projectsApi.removeTech(projectId, id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['project-tech', projectId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['project-tech', projectId] });
+      showToast('Tecnologia removida.', 'info');
+    },
+    onError: () => showToast('Erro ao remover tecnologia.', 'error'),
   });
 
   if (isLoading) return <Skeleton height={200} />;
+  if (isError) return <Alert severity="error">Erro ao carregar stack tecnológica.</Alert>;
 
   const grouped = TECH_CATEGORIES.reduce<Record<TechCategory, ProjectTechStack[]>>(
     (acc, cat) => ({ ...acc, [cat]: items.filter((i) => i.category === cat) }),
@@ -815,7 +840,8 @@ function TechStackTab({ projectId }: { projectId: string }) {
 
 function ObjectivesTab({ projectId }: { projectId: string }) {
   const qc = useQueryClient();
-  const { data: items = [], isLoading } = useQuery({
+  const { showToast } = useSnackbar();
+  const { data: items = [], isLoading, isError } = useQuery({
     queryKey: ['project-objectives', projectId],
     queryFn: () => projectsApi.listObjectives(projectId),
   });
@@ -843,7 +869,9 @@ function ObjectivesTab({ projectId }: { projectId: string }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['project-objectives', projectId] });
       setDialogOpen(false);
+      showToast(editing ? 'Objetivo atualizado.' : 'Objetivo adicionado.');
     },
+    onError: () => showToast('Erro ao salvar objetivo.', 'error'),
   });
 
   const toggleMutation = useMutation({
@@ -854,10 +882,15 @@ function ObjectivesTab({ projectId }: { projectId: string }) {
 
   const removeMutation = useMutation({
     mutationFn: (id: string) => projectsApi.removeObjective(projectId, id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['project-objectives', projectId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['project-objectives', projectId] });
+      showToast('Objetivo removido.', 'info');
+    },
+    onError: () => showToast('Erro ao remover objetivo.', 'error'),
   });
 
   if (isLoading) return <Skeleton height={200} />;
+  if (isError) return <Alert severity="error">Erro ao carregar objetivos.</Alert>;
 
   const achieved = items.filter((o) => o.is_achieved).length;
 
@@ -981,7 +1014,8 @@ function ObjectivesTab({ projectId }: { projectId: string }) {
 
 function RisksTab({ projectId }: { projectId: string }) {
   const qc = useQueryClient();
-  const { data: items = [], isLoading } = useQuery({
+  const { showToast } = useSnackbar();
+  const { data: items = [], isLoading, isError } = useQuery({
     queryKey: ['project-risks', projectId],
     queryFn: () => projectsApi.listRisks(projectId),
   });
@@ -1023,15 +1057,22 @@ function RisksTab({ projectId }: { projectId: string }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['project-risks', projectId] });
       setDialogOpen(false);
+      showToast(editing ? 'Risco atualizado.' : 'Risco adicionado.');
     },
+    onError: () => showToast('Erro ao salvar risco.', 'error'),
   });
 
   const removeMutation = useMutation({
     mutationFn: (id: string) => projectsApi.removeRisk(projectId, id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['project-risks', projectId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['project-risks', projectId] });
+      showToast('Risco removido.', 'info');
+    },
+    onError: () => showToast('Erro ao remover risco.', 'error'),
   });
 
   if (isLoading) return <Skeleton height={200} />;
+  if (isError) return <Alert severity="error">Erro ao carregar riscos.</Alert>;
 
   return (
     <Box>
@@ -1187,7 +1228,8 @@ function RisksTab({ projectId }: { projectId: string }) {
 
 function MilestonesTab({ projectId }: { projectId: string }) {
   const qc = useQueryClient();
-  const { data: items = [], isLoading } = useQuery({
+  const { showToast } = useSnackbar();
+  const { data: items = [], isLoading, isError } = useQuery({
     queryKey: ['project-milestones', projectId],
     queryFn: () => projectsApi.listMilestones(projectId),
   });
@@ -1233,15 +1275,22 @@ function MilestonesTab({ projectId }: { projectId: string }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['project-milestones', projectId] });
       setDialogOpen(false);
+      showToast(editing ? 'Marco atualizado.' : 'Marco adicionado.');
     },
+    onError: () => showToast('Erro ao salvar marco.', 'error'),
   });
 
   const removeMutation = useMutation({
     mutationFn: (id: string) => projectsApi.removeMilestone(projectId, id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['project-milestones', projectId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['project-milestones', projectId] });
+      showToast('Marco removido.', 'info');
+    },
+    onError: () => showToast('Erro ao remover marco.', 'error'),
   });
 
   if (isLoading) return <Skeleton height={200} />;
+  if (isError) return <Alert severity="error">Erro ao carregar marcos.</Alert>;
 
   return (
     <Box>
@@ -1425,15 +1474,34 @@ export default function ProjectDetailPage() {
 
   return (
     <Box>
-      {/* Back button */}
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={() => navigate('/projects')}
-        sx={{ mb: 2 }}
-        size="small"
-      >
-        Projetos
-      </Button>
+      {/* Back button + quick nav */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/projects')}
+          size="small"
+        >
+          Projetos
+        </Button>
+        <Box display="flex" gap={1}>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<PeopleIcon />}
+            onClick={() => navigate(`/projects/${projectId}/members`)}
+          >
+            Membros
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<ViewKanbanIcon />}
+            onClick={() => navigate(`/projects/${projectId}`)}
+          >
+            Abrir Kanban
+          </Button>
+        </Box>
+      </Box>
 
       <Divider sx={{ mb: 0 }} />
 

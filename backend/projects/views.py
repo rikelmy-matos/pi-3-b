@@ -48,6 +48,12 @@ class IsProjectOwnerOrAdmin(permissions.BasePermission):
 class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+
+    def get_permissions(self):
+        if self.action in ("update", "partial_update", "destroy"):
+            return [permissions.IsAuthenticated(), IsProjectOwnerOrAdmin()]
+        return [permissions.IsAuthenticated()]
+
     filterset_fields = ["status"]
     search_fields = ["name", "description"]
     ordering_fields = ["created_at", "due_date", "name"]

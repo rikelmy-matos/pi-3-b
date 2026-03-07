@@ -2,9 +2,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SnackbarProvider } from './context/SnackbarContext';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import ProfilePage from './pages/auth/ProfilePage';
 import DashboardPage from './pages/projects/DashboardPage';
 import ProjectsPage from './pages/projects/ProjectsPage';
 import NewProjectPage from './pages/projects/NewProjectPage';
@@ -56,6 +58,7 @@ function AppRoutes() {
         <Route path="/projects/:projectId/members" element={<MembersPage />} />
         <Route path="/projects/:projectId/overview" element={<ProjectDetailPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Route>
 
       {/* Fallback */}
@@ -71,7 +74,9 @@ export default function App() {
         <CssBaseline />
         <BrowserRouter>
           <AuthProvider>
-            <AppRoutes />
+            <SnackbarProvider>
+              <AppRoutes />
+            </SnackbarProvider>
           </AuthProvider>
         </BrowserRouter>
       </ThemeProvider>
