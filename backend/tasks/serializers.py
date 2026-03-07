@@ -1,6 +1,13 @@
 from rest_framework import serializers
-from .models import Task, Comment
+from .models import Task, Comment, KanbanColumn, TaskActivity
 from users.serializers import UserSerializer
+
+
+class KanbanColumnSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KanbanColumn
+        fields = ["id", "project", "name", "slug", "color", "order", "created_at"]
+        read_only_fields = ["id", "created_at"]
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -16,9 +23,39 @@ class CommentSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+class TaskActivitySerializer(serializers.ModelSerializer):
+    actor = UserSerializer(read_only=True)
+    task_title = serializers.SerializerMethodField()
+
+    def get_task_title(self, obj):
+        return obj.task.title if obj.task else None
+
+    class Meta:
+        model = TaskActivity
+        fields = [
+            "id",
+            "task",
+            "task_title",
+            "actor",
+            "action",
+            "from_value",
+            "to_value",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "task",
+            "actor",
+            "action",
+            "from_value",
+            "to_value",
+            "created_at",
+        ]
+
+
 class TaskSerializer(serializers.ModelSerializer):
     assignee = UserSerializer(read_only=True)
-    assignee_id = serializers.UUIDField(
+    assignee_id = serializers.IntegerField(
         write_only=True, required=False, allow_null=True
     )
     created_by = UserSerializer(read_only=True)
@@ -59,12 +96,14 @@ class TaskListSerializer(serializers.ModelSerializer):
 
     assignee = UserSerializer(read_only=True)
     comment_count = serializers.SerializerMethodField()
+    project_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
         fields = [
             "id",
             "project",
+            "project_name",
             "title",
             "description",
             "status",
@@ -79,9 +118,12 @@ class TaskListSerializer(serializers.ModelSerializer):
     def get_comment_count(self, obj):
         return obj.comments.count()
 
+    def get_project_name(self, obj):
+        return obj.project.name if obj.project else None
+
 
 class TaskMoveSerializer(serializers.Serializer):
     """Used for moving a task to a new status/position (Kanban drag & drop)."""
 
-    status = serializers.ChoiceField(choices=Task.STATUS_CHOICES)
+    status = serializers.CharField(max_length=60)
     position = serializers.IntegerField(min_value=0)

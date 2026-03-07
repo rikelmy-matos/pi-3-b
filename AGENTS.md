@@ -201,6 +201,18 @@ CREATE DATABASE taskmanager;
 | GET/PATCH/DELETE | `/api/v1/projects/{id}/` | Project detail |
 | POST | `/api/v1/projects/{id}/members/` | Add member |
 | DELETE | `/api/v1/projects/{id}/members/{userId}/` | Remove member |
+| PATCH | `/api/v1/projects/{id}/members/{userId}/update/` | Update member specialty/hourly_rate/role |
+| GET | `/api/v1/projects/{id}/members-overview/` | Member overview with task stats |
+| GET | `/api/v1/projects/{id}/activity/` | Project activity feed |
+| GET/PUT/PATCH | `/api/v1/projects/{id}/budget/` | Upsert project budget |
+| GET/POST | `/api/v1/projects/{id}/tech-stack/` | List / add tech stack item |
+| PATCH/DELETE | `/api/v1/projects/{id}/tech-stack/{itemId}/` | Update / delete tech item |
+| GET/POST | `/api/v1/projects/{id}/objectives/` | List / add objective |
+| PATCH/DELETE | `/api/v1/projects/{id}/objectives/{itemId}/` | Update / delete objective |
+| GET/POST | `/api/v1/projects/{id}/risks/` | List / add risk |
+| PATCH/DELETE | `/api/v1/projects/{id}/risks/{itemId}/` | Update / delete risk |
+| GET/POST | `/api/v1/projects/{id}/milestones/` | List / add milestone |
+| PATCH/DELETE | `/api/v1/projects/{id}/milestones/{itemId}/` | Update / delete milestone |
 | GET/POST | `/api/v1/tasks/` | List/create tasks |
 | GET/PATCH/DELETE | `/api/v1/tasks/{id}/` | Task detail |
 | PATCH | `/api/v1/tasks/{id}/move/` | Move task (Kanban drag) |
@@ -287,3 +299,9 @@ kubectl logs -n taskmanager deploy/taskmanager-backend
 - JWT access token is stored in `localStorage`; refresh is automatic via Axios interceptor
 - The `@hello-pangea/dnd` library is the actively maintained fork of `react-beautiful-dnd`
 - FullCalendar renders task `due_date` fields; color-coded by priority
+- `ProjectDetailPage` lives at `/projects/:projectId/overview` with 7 tabs: Visão Geral,
+  Orçamento, Equipe, Arquitetura, Objetivos, Riscos, Marcos
+- `ProjectBudget` is a OneToOne to `Project` — upserted via PUT on `/budget/`
+- `ProjectMember` carries `specialty` (CharField) and `hourly_rate` (DecimalField, nullable)
+- Sub-resources (tech_stack, objectives, risks, milestones) are separate models with UUID PKs,
+  all scoped to a `Project` FK and managed via nested URL actions on `ProjectViewSet`

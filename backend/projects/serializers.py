@@ -1,5 +1,13 @@
 from rest_framework import serializers
-from .models import Project, ProjectMember
+from .models import (
+    Project,
+    ProjectMember,
+    ProjectBudget,
+    ProjectTechStack,
+    ProjectObjective,
+    ProjectRisk,
+    ProjectMilestone,
+)
 from users.serializers import UserSerializer
 
 
@@ -13,14 +21,79 @@ class ProjectMemberSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProjectMember
-        fields = ["id", "user", "user_id", "role", "joined_at"]
+        fields = [
+            "id",
+            "user",
+            "user_id",
+            "role",
+            "specialty",
+            "hourly_rate",
+            "joined_at",
+        ]
         read_only_fields = ["id", "joined_at"]
+
+
+class ProjectBudgetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectBudget
+        fields = ["id", "currency", "estimated_cost", "actual_cost", "notes"]
+        read_only_fields = ["id"]
+
+
+class ProjectTechStackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectTechStack
+        fields = ["id", "name", "version", "category", "notes"]
+        read_only_fields = ["id"]
+
+
+class ProjectObjectiveSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectObjective
+        fields = ["id", "title", "description", "is_achieved", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+
+class ProjectRiskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectRisk
+        fields = [
+            "id",
+            "title",
+            "description",
+            "probability",
+            "impact",
+            "mitigation",
+            "status",
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
+
+
+class ProjectMilestoneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectMilestone
+        fields = [
+            "id",
+            "title",
+            "description",
+            "due_date",
+            "completion_pct",
+            "status",
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
 
 
 class ProjectSerializer(serializers.ModelSerializer):
     owner = UserSerializer(read_only=True)
     members = ProjectMemberSerializer(many=True, read_only=True)
     task_count = serializers.SerializerMethodField()
+    budget = ProjectBudgetSerializer(read_only=True)
+    tech_stack = ProjectTechStackSerializer(many=True, read_only=True)
+    objectives = ProjectObjectiveSerializer(many=True, read_only=True)
+    risks = ProjectRiskSerializer(many=True, read_only=True)
+    milestones = ProjectMilestoneSerializer(many=True, read_only=True)
 
     class Meta:
         model = Project
@@ -34,6 +107,11 @@ class ProjectSerializer(serializers.ModelSerializer):
             "start_date",
             "due_date",
             "task_count",
+            "budget",
+            "tech_stack",
+            "objectives",
+            "risks",
+            "milestones",
             "created_at",
             "updated_at",
         ]

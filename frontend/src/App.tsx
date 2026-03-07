@@ -10,6 +10,8 @@ import ProjectsPage from './pages/projects/ProjectsPage';
 import NewProjectPage from './pages/projects/NewProjectPage';
 import KanbanBoard from './pages/tasks/KanbanBoard';
 import CalendarPage from './pages/tasks/CalendarPage';
+import MembersPage from './pages/projects/MembersPage';
+import ProjectDetailPage from './pages/projects/ProjectDetailPage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 1000 * 60 } },
@@ -51,6 +53,8 @@ function AppRoutes() {
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/new" element={<NewProjectPage />} />
         <Route path="/projects/:projectId" element={<KanbanBoard />} />
+        <Route path="/projects/:projectId/members" element={<MembersPage />} />
+        <Route path="/projects/:projectId/overview" element={<ProjectDetailPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
       </Route>
 
