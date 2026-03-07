@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Button,
@@ -9,8 +9,12 @@ import {
   Avatar,
   Divider,
   CircularProgress,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import LockIcon from '@mui/icons-material/Lock';
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
@@ -19,14 +23,11 @@ import { useSnackbar } from '../../context/SnackbarContext';
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
   const { showToast } = useSnackbar();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState({
-    first_name: '',
-    last_name: '',
-    bio: '',
-  });
+  // ── Profile form state ──────────────────────────────────────────────────────
+  const [form, setForm] = useState({ first_name: '', last_name: '', bio: '' });
 
-  // Populate form from current user
   useEffect(() => {
     if (user) {
       setForm({
@@ -52,6 +53,68 @@ export default function ProfilePage() {
     updateMutation.mutate(form);
   };
 
+  // ── Avatar upload ───────────────────────────────────────────────────────────
+  const avatarMutation = useMutation({
+    mutationFn: (file: File) => authApi.uploadAvatar(file),
+    onSuccess: async () => {
+      await refreshUser();
+      showToast('Foto atualizada com sucesso.');
+    },
+    onError: () => showToast('Erro ao enviar foto.', 'error'),
+  });
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) avatarMutation.mutate(file);
+    // Reset input so the same file can be re-selected
+    e.target.value = '';
+  };
+
+  // ── Change password ─────────────────────────────────────────────────────────
+  const [pwForm, setPwForm] = useState({
+    current_password: '',
+    new_password: '',
+    new_password_confirm: '',
+  });
+  const [pwErrors, setPwErrors] = useState<Record<string, string>>({});
+
+  const pwMutation = useMutation({
+    mutationFn: () =>
+      authApi.changePassword(
+        pwForm.current_password,
+        pwForm.new_password,
+        pwForm.new_password_confirm,
+      ),
+    onSuccess: () => {
+      setPwForm({ current_password: '', new_password: '', new_password_confirm: '' });
+      setPwErrors({});
+      showToast('Senha alterada com sucesso.');
+    },
+    onError: (err: unknown) => {
+      const data = (err as { response?: { data?: Record<string, string[]> } })?.response?.data;
+      if (data) {
+        const mapped: Record<string, string> = {};
+        for (const [k, v] of Object.entries(data)) {
+          mapped[k] = Array.isArray(v) ? v[0] : String(v);
+        }
+        setPwErrors(mapped);
+      } else {
+        showToast('Erro ao alterar senha.', 'error');
+      }
+    },
+  });
+
+  const handlePwSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwErrors({});
+    if (pwForm.new_password !== pwForm.new_password_confirm) {
+      setPwErrors({ new_password_confirm: 'As senhas não coincidem.' });
+      return;
+    }
+    pwMutation.mutate();
+  };
+
+  // ── Avatar display ──────────────────────────────────────────────────────────
   const initials =
     ((user?.first_name?.[0] ?? '') + (user?.last_name?.[0] ?? '')).toUpperCase() ||
     user?.username?.[0]?.toUpperCase() ||
@@ -63,13 +126,50 @@ export default function ProfilePage() {
         Meu Perfil
       </Typography>
 
-      <Card elevation={2}>
+      {/* ── Profile info card ─────────────────────────────────────────────── */}
+      <Card elevation={2} sx={{ mb: 3 }}>
         <CardContent>
-          {/* Avatar + username row */}
+          {/* Avatar + upload button */}
           <Box display="flex" alignItems="center" gap={2} mb={3}>
-            <Avatar sx={{ width: 64, height: 64, bgcolor: 'primary.main', fontSize: 24 }}>
-              {initials}
-            </Avatar>
+            <Box position="relative">
+              <Avatar
+                src={user?.avatar_url ?? undefined}
+                sx={{ width: 72, height: 72, bgcolor: 'primary.main', fontSize: 26 }}
+              >
+                {!user?.avatar_url && initials}
+              </Avatar>
+              <Tooltip title="Trocar foto">
+                <IconButton
+                  size="small"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarMutation.isPending}
+                  sx={{
+                    position: 'absolute',
+                    bottom: -4,
+                    right: -4,
+                    bgcolor: 'primary.main',
+                    color: '#fff',
+                    width: 26,
+                    height: 26,
+                    '&:hover': { bgcolor: 'primary.dark' },
+                    boxShadow: 2,
+                  }}
+                >
+                  {avatarMutation.isPending ? (
+                    <CircularProgress size={12} color="inherit" />
+                  ) : (
+                    <PhotoCameraIcon sx={{ fontSize: 14 }} />
+                  )}
+                </IconButton>
+              </Tooltip>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleAvatarChange}
+              />
+            </Box>
             <Box>
               <Typography variant="h6" fontWeight={600}>
                 {user?.full_name || user?.username}
@@ -129,10 +229,83 @@ export default function ProfilePage() {
             <Button
               type="submit"
               variant="contained"
-              startIcon={updateMutation.isPending ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
+              startIcon={
+                updateMutation.isPending ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : (
+                  <SaveIcon />
+                )
+              }
               disabled={updateMutation.isPending}
             >
               Salvar Alterações
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* ── Change password card ───────────────────────────────────────────── */}
+      <Card elevation={2}>
+        <CardContent>
+          <Box display="flex" alignItems="center" gap={1} mb={2}>
+            <LockIcon sx={{ color: 'primary.main' }} />
+            <Typography variant="h6" fontWeight={700}>
+              Alterar Senha
+            </Typography>
+          </Box>
+          <Divider sx={{ mb: 3 }} />
+
+          <Box component="form" onSubmit={handlePwSubmit}>
+            <TextField
+              label="Senha atual"
+              type="password"
+              fullWidth
+              required
+              sx={{ mb: 2 }}
+              value={pwForm.current_password}
+              onChange={(e) => setPwForm((p) => ({ ...p, current_password: e.target.value }))}
+              error={!!pwErrors.current_password}
+              helperText={pwErrors.current_password}
+            />
+            <TextField
+              label="Nova senha"
+              type="password"
+              fullWidth
+              required
+              sx={{ mb: 2 }}
+              value={pwForm.new_password}
+              onChange={(e) => setPwForm((p) => ({ ...p, new_password: e.target.value }))}
+              error={!!pwErrors.new_password}
+              helperText={pwErrors.new_password ?? 'Mínimo de 8 caracteres.'}
+            />
+            <TextField
+              label="Confirmar nova senha"
+              type="password"
+              fullWidth
+              required
+              sx={{ mb: 3 }}
+              value={pwForm.new_password_confirm}
+              onChange={(e) =>
+                setPwForm((p) => ({ ...p, new_password_confirm: e.target.value }))
+              }
+              error={!!pwErrors.new_password_confirm}
+              helperText={pwErrors.new_password_confirm}
+            />
+
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              startIcon={
+                pwMutation.isPending ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : (
+                  <LockIcon />
+                )
+              }
+              disabled={pwMutation.isPending}
+            >
+              Alterar Senha
             </Button>
           </Box>
         </CardContent>

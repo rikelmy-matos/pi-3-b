@@ -35,6 +35,23 @@ export const authApi = {
   updateProfile: (data: Partial<User>) =>
     apiClient.patch<User>('/auth/profile/', data).then((r) => r.data),
 
+  uploadAvatar: (file: File) => {
+    const fd = new FormData();
+    fd.append('avatar', file);
+    return apiClient
+      .patch<User>('/auth/profile/', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      .then((r) => r.data);
+  },
+
+  changePassword: (currentPassword: string, newPassword: string, newPasswordConfirm: string) =>
+    apiClient
+      .post('/auth/change-password/', {
+        current_password: currentPassword,
+        new_password: newPassword,
+        new_password_confirm: newPasswordConfirm,
+      })
+      .then((r) => r.data),
+
   listUsers: (search?: string) =>
     apiClient
       .get<PaginatedResponse<User>>('/auth/users/', { params: { search } })

@@ -153,6 +153,7 @@ export default function AppLayout() {
           onClick={(e) => setAnchorEl(e.currentTarget as HTMLElement)}
         >
           <Avatar
+            src={user?.avatar_url ?? undefined}
             sx={{
               width: 36,
               height: 36,
@@ -163,7 +164,7 @@ export default function AppLayout() {
               border: '2px solid rgba(255,255,255,0.4)',
             }}
           >
-            {initials.toUpperCase()}
+            {!user?.avatar_url && initials.toUpperCase()}
           </Avatar>
           <Box flex={1} overflow="hidden">
             <Typography
