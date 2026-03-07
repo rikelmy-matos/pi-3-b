@@ -1,13 +1,41 @@
+import os
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator
 from django.db import models
+
+# SEC-14: allowed avatar extensions
+_ALLOWED_AVATAR_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+# SEC-14: max avatar file size (2 MB)
+_MAX_AVATAR_SIZE = 2 * 1024 * 1024
+
+
+def _validate_avatar(file):
+    ext = os.path.splitext(file.name)[1].lower()
+    if ext not in _ALLOWED_AVATAR_EXTENSIONS:
+        raise ValidationError(
+            f"Extensão de arquivo não permitida: {ext}. "
+            f"Permitido: {', '.join(sorted(_ALLOWED_AVATAR_EXTENSIONS))}"
+        )
+    if file.size > _MAX_AVATAR_SIZE:
+        raise ValidationError(
+            f"O arquivo de avatar não pode exceder {_MAX_AVATAR_SIZE // (1024 * 1024)} MB."
+        )
 
 
 class User(AbstractUser):
     """Extended user model with avatar and bio."""
 
     email = models.EmailField(unique=True)
-    bio = models.TextField(blank=True, default="")
-    avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
+    # QUAL-2: bio max_length to avoid unbounded text in simple profile
+    bio = models.TextField(blank=True, default="", max_length=500)
+    # SEC-14: avatar with file-type and size validators
+    avatar = models.ImageField(
+        upload_to="avatars/",
+        null=True,
+        blank=True,
+        validators=[_validate_avatar],
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

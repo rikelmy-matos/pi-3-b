@@ -60,6 +60,7 @@ class TaskSerializer(serializers.ModelSerializer):
     )
     created_by = UserSerializer(read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
+    # PERF-7: use annotation when available, fall back to count
     comment_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -84,7 +85,28 @@ class TaskSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_by", "created_at", "updated_at"]
 
     def get_comment_count(self, obj):
+        # Use pre-annotated value if available (avoids extra query)
+        if hasattr(obj, "comment_count_annotation"):
+            return obj.comment_count_annotation
         return obj.comments.count()
+
+    def validate_assignee_id(self, value):
+        """SEC-20: assignee must be a member of the task's project."""
+        if value is None:
+            return value
+        project = self.initial_data.get("project") or (
+            self.instance.project_id if self.instance else None
+        )
+        if project:
+            from projects.models import ProjectMember
+
+            if not ProjectMember.objects.filter(
+                project_id=project, user_id=value
+            ).exists():
+                raise serializers.ValidationError(
+                    "O responsável deve ser membro do projeto."
+                )
+        return value
 
     def create(self, validated_data):
         validated_data["created_by"] = self.context["request"].user
@@ -116,6 +138,8 @@ class TaskListSerializer(serializers.ModelSerializer):
         ]
 
     def get_comment_count(self, obj):
+        if hasattr(obj, "comment_count_annotation"):
+            return obj.comment_count_annotation
         return obj.comments.count()
 
     def get_project_name(self, obj):
@@ -123,7 +147,7 @@ class TaskListSerializer(serializers.ModelSerializer):
 
 
 class TaskMoveSerializer(serializers.Serializer):
-    """Used for moving a task to a new status/position (Kanban drag & drop)."""
+    """Used for moving a task to a new status column and/or position (Kanban drag & drop)."""
 
     status = serializers.CharField(max_length=60)
     position = serializers.IntegerField(min_value=0)

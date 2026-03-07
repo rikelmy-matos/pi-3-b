@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from .models import (
     Project,
@@ -10,12 +11,14 @@ from .models import (
 )
 from users.serializers import UserSerializer
 
+User = get_user_model()  # QUAL-6: replace __import__ hack
+
 
 class ProjectMemberSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     user_id = serializers.PrimaryKeyRelatedField(
         source="user",
-        queryset=__import__("users.models", fromlist=["User"]).User.objects.all(),
+        queryset=User.objects.all(),
         write_only=True,
     )
 
@@ -31,6 +34,14 @@ class ProjectMemberSerializer(serializers.ModelSerializer):
             "joined_at",
         ]
         read_only_fields = ["id", "joined_at"]
+
+    def validate_role(self, value):
+        # SEC-17: external callers cannot promote themselves/others to owner
+        if value == ProjectMember.ROLE_OWNER:
+            raise serializers.ValidationError(
+                "Não é possível atribuir a função 'owner' por esta operação."
+            )
+        return value
 
 
 class ProjectBudgetSerializer(serializers.ModelSerializer):
@@ -88,7 +99,7 @@ class ProjectMilestoneSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     owner = UserSerializer(read_only=True)
     members = ProjectMemberSerializer(many=True, read_only=True)
-    task_count = serializers.SerializerMethodField()
+    task_count = serializers.IntegerField(read_only=True)  # PERF-2: from annotation
     budget = ProjectBudgetSerializer(read_only=True)
     tech_stack = ProjectTechStackSerializer(many=True, read_only=True)
     objectives = ProjectObjectiveSerializer(many=True, read_only=True)
@@ -117,9 +128,6 @@ class ProjectSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "owner", "created_at", "updated_at"]
 
-    def get_task_count(self, obj):
-        return obj.tasks.count()
-
     def create(self, validated_data):
         user = self.context["request"].user
         project = Project.objects.create(owner=user, **validated_data)
@@ -134,8 +142,8 @@ class ProjectListSerializer(serializers.ModelSerializer):
     """Lighter serializer for list views."""
 
     owner = UserSerializer(read_only=True)
-    task_count = serializers.SerializerMethodField()
-    member_count = serializers.SerializerMethodField()
+    task_count = serializers.IntegerField(read_only=True)  # PERF-2: from annotation
+    member_count = serializers.IntegerField(read_only=True)  # PERF-2: from annotation
 
     class Meta:
         model = Project
@@ -151,9 +159,3 @@ class ProjectListSerializer(serializers.ModelSerializer):
             "member_count",
             "created_at",
         ]
-
-    def get_task_count(self, obj):
-        return obj.tasks.count()
-
-    def get_member_count(self, obj):
-        return obj.members.count()

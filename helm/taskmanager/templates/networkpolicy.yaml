@@ -1,0 +1,93 @@
+# M2: NetworkPolicy — restrict pod-to-pod traffic
+# frontend → backend only (port 8000)
+# backend → postgres only (port 5432)
+# postgres: no egress needed
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "taskmanager.fullname" . }}-backend
+  labels:
+    {{- include "taskmanager.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "taskmanager.backend.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "taskmanager.frontend.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.port }}
+  egress:
+    # backend → postgres
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "taskmanager.postgres.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.postgres.port }}
+    # backend → DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "taskmanager.fullname" . }}-postgres
+  labels:
+    {{- include "taskmanager.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "taskmanager.postgres.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "taskmanager.backend.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.postgres.port }}
+  egress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "taskmanager.fullname" . }}-frontend
+  labels:
+    {{- include "taskmanager.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "taskmanager.frontend.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow ingress controller → frontend
+    - ports:
+        - protocol: TCP
+          port: {{ .Values.frontend.port }}
+  egress:
+    # frontend → backend
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "taskmanager.backend.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.port }}
+    # frontend → DNS
+    - ports:
+        - protocol: UDP
+          port: 53

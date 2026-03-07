@@ -1,5 +1,4 @@
 from rest_framework import generics, permissions, status
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -14,7 +13,7 @@ from .serializers import (
 
 
 class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
+    # QUAL-8: removed dead queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
 
@@ -41,9 +40,8 @@ class ChangePasswordView(APIView):
         serializer.is_valid(raise_exception=True)
         request.user.set_password(serializer.validated_data["new_password"])
         request.user.save()
-        return Response(
-            {"detail": "Senha alterada com sucesso."}, status=status.HTTP_200_OK
-        )
+        # QUAL-7: 204 No Content — success with no body to return
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AvatarView(APIView):
@@ -59,9 +57,25 @@ class AvatarView(APIView):
 
 
 class UserListView(generics.ListAPIView):
+    """
+    SEC-16: Return only users that share at least one project with the requester.
+    This prevents enumerating every account in the system.
+    """
+
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
     search_fields = ["email", "first_name", "last_name", "username"]
 
     def get_queryset(self):
-        return User.objects.exclude(id=self.request.user.id)
+        from projects.models import Project
+
+        # IDs of all projects the current user is a member of
+        my_project_ids = Project.objects.filter(
+            members__user=self.request.user
+        ).values_list("id", flat=True)
+        # All users (except self) who are members of those same projects
+        return (
+            User.objects.filter(project_memberships__project_id__in=my_project_ids)
+            .exclude(id=self.request.user.id)
+            .distinct()
+        )

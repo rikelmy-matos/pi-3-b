@@ -59,7 +59,10 @@ class Task(models.Model):
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        # QUAL-15: SET_NULL so deleting a user doesn't cascade-delete their tasks
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="created_tasks",
     )
     due_date = models.DateField(null=True, blank=True)
@@ -116,7 +119,10 @@ class Comment(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="comments")
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        # QUAL-16: SET_NULL so deleting a user doesn't cascade-delete their comments
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="comments",
     )
     body = models.TextField()

@@ -26,7 +26,10 @@ class Project(models.Model):
     )
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        # QUAL-9: SET_NULL so deleting a user doesn't cascade-delete their projects
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="owned_projects",
     )
     start_date = models.DateField(null=True, blank=True)

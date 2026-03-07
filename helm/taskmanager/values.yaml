@@ -20,7 +20,7 @@ frontend:
   image: frontend
   tag: latest
   replicas: 1
-  port: 80
+  port: 8080
   resources:
     requests:
       cpu: "50m"
@@ -35,6 +35,13 @@ postgres:
   port: 5432
   storage: 5Gi
   storageClass: local-path
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
 
 ingress:
   host: sofplan.com.br

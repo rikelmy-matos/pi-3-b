@@ -1,0 +1,24 @@
+# M1: PodDisruptionBudget — ensure at least 1 pod available during rollouts
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "taskmanager.fullname" . }}-backend
+  labels:
+    {{- include "taskmanager.labels" . | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "taskmanager.backend.selectorLabels" . | nindent 6 }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "taskmanager.fullname" . }}-frontend
+  labels:
+    {{- include "taskmanager.labels" . | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "taskmanager.frontend.selectorLabels" . | nindent 6 }}

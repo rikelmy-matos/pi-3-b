@@ -1,35 +1,70 @@
-version: "3.9"
-
 services:
   db:
     image: postgres:16-alpine
-    restart: unless-stopped
+    restart: on-failure:5
     environment:
       POSTGRES_DB: taskmanager
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
+    # postgres entrypoint needs CHOWN/FOWNER/SETUID/SETGID to set up data dir
+    cap_drop:
+      - NET_RAW
+      - SYS_PTRACE
+      - AUDIT_WRITE
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    restart: unless-stopped
+    restart: on-failure:5
     env_file: ./backend/.env
     environment:
       DB_HOST: db
       DB_PORT: "5432"
-    ports:
-      - "8000:8000"
+    # S2: backend port NOT exposed to host — only reachable via frontend proxy
+    networks:
+      - backend-net
+      - frontend-net
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.10"
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   frontend:
     build:
@@ -37,11 +72,43 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: /api/v1
-    restart: unless-stopped
+    restart: on-failure:5
     ports:
-      - "80:80"
+      - "8080:8080"
+    networks:
+      - frontend-net
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: "0.20"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   postgres_data:
+
+networks:
+  backend-net:
+    driver: bridge
+    internal: true   # db + backend only; no external access
+  frontend-net:
+    driver: bridge   # frontend ↔ backend; frontend has external access for port binding

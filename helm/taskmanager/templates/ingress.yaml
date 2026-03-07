@@ -8,6 +8,13 @@ metadata:
     cert-manager.io/cluster-issuer: {{ .Values.ingress.clusterIssuer | quote }}
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    # S11: /admin/ is NOT in the public Ingress — access only inside cluster (kubectl port-forward)
+    # S12: Force HTTP → HTTPS redirect
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # S13: HSTS
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
 spec:
   ingressClassName: nginx
   tls:
@@ -16,6 +23,7 @@ spec:
         - www.{{ .Values.ingress.host }}
       secretName: {{ .Values.ingress.tlsSecret }}
   rules:
+    # S14: primary vhost
     - host: {{ .Values.ingress.host }}
       http:
         paths:
@@ -23,30 +31,45 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: backend
+                name: {{ include "taskmanager.fullname" . }}-backend
                 port:
                   number: {{ .Values.backend.port }}
-          - path: /admin/
+          - path: /media/
             pathType: Prefix
             backend:
               service:
-                name: backend
+                name: {{ include "taskmanager.fullname" . }}-backend
                 port:
                   number: {{ .Values.backend.port }}
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: frontend
+                name: {{ include "taskmanager.fullname" . }}-frontend
                 port:
-                  number: 80
+                  number: {{ .Values.frontend.port }}
+    # S14: www vhost — mirrors primary (includes /api/ routing)
     - host: www.{{ .Values.ingress.host }}
       http:
         paths:
+          - path: /api/
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "taskmanager.fullname" . }}-backend
+                port:
+                  number: {{ .Values.backend.port }}
+          - path: /media/
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "taskmanager.fullname" . }}-backend
+                port:
+                  number: {{ .Values.backend.port }}
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: frontend
+                name: {{ include "taskmanager.fullname" . }}-frontend
                 port:
-                  number: 80
+                  number: {{ .Values.frontend.port }}

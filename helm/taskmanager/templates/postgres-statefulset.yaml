@@ -16,6 +16,12 @@ spec:
       labels:
         {{- include "taskmanager.postgres.selectorLabels" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ include "taskmanager.fullname" . }}-postgres
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
       containers:
         - name: postgres
           image: "{{ .Values.postgres.image }}:{{ .Values.postgres.tag }}"
@@ -31,6 +37,13 @@ spec:
                 secretKeyRef:
                   name: {{ include "taskmanager.fullname" . }}-secret
                   key: DB_PASSWORD
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data

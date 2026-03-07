@@ -1,3 +1,4 @@
+from django.db.models import Count
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -39,9 +40,11 @@ class TaskViewSet(viewsets.ModelViewSet):
     ordering_fields = ["position", "due_date", "created_at", "priority"]
 
     def get_queryset(self):
+        # PERF-7: annotate comment_count to avoid N+1 in list/detail views
         return (
             Task.objects.filter(project__members__user=self.request.user)
             .select_related("assignee", "created_by", "project")
+            .annotate(comment_count_annotation=Count("comments", distinct=True))
             .distinct()
         )
 
@@ -71,7 +74,8 @@ class TaskViewSet(viewsets.ModelViewSet):
         )
 
     def perform_update(self, serializer):
-        old = self.get_object()
+        # PERF-9: use serializer.instance instead of calling get_object() again
+        old = serializer.instance
         old_assignee = str(old.assignee_id) if old.assignee_id else ""
         old_status = old.status
 
@@ -99,6 +103,20 @@ class TaskViewSet(viewsets.ModelViewSet):
                     to_value="",
                 )
 
+        # Log status change (covers non-move edits that change status)
+        if old_status != task.status:
+            cols = {
+                c.slug: c.name
+                for c in KanbanColumn.objects.filter(project=task.project)
+            }
+            TaskActivity.objects.create(
+                task=task,
+                actor=self.request.user,
+                action=TaskActivity.ACTION_MOVED,
+                from_value=cols.get(old_status, old_status),
+                to_value=cols.get(task.status, task.status),
+            )
+
     @action(detail=True, methods=["patch"], url_path="move")
     def move(self, request, pk=None):
         """Move a task to a new status column and/or position (Kanban drag & drop)."""
@@ -107,21 +125,27 @@ class TaskViewSet(viewsets.ModelViewSet):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        old_status = task.status
         new_status = serializer.validated_data["status"]
         new_position = serializer.validated_data["position"]
 
+        # SEC-22: validate new_status is a real column slug for this project
+        # (cache the column query result for the activity log too)
+        cols = {
+            c.slug: c.name for c in KanbanColumn.objects.filter(project=task.project)
+        }
+        if cols and new_status not in cols:
+            return Response(
+                {"detail": f"Status '{new_status}' não é uma coluna válida."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        old_status = task.status
         task.status = new_status
         task.position = new_position
         task.save(update_fields=["status", "position", "updated_at"])
 
         # Log only if column actually changed
         if old_status != new_status:
-            # Resolve human-readable column names if available
-            cols = {
-                c.slug: c.name
-                for c in KanbanColumn.objects.filter(project=task.project)
-            }
             from_name = cols.get(old_status, old_status)
             to_name = cols.get(new_status, new_status)
             TaskActivity.objects.create(

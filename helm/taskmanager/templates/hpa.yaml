@@ -1,0 +1,42 @@
+# M4: HorizontalPodAutoscaler for backend and frontend
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "taskmanager.fullname" . }}-backend
+  labels:
+    {{- include "taskmanager.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "taskmanager.fullname" . }}-backend
+  minReplicas: {{ .Values.backend.replicas }}
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "taskmanager.fullname" . }}-frontend
+  labels:
+    {{- include "taskmanager.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "taskmanager.fullname" . }}-frontend
+  minReplicas: {{ .Values.frontend.replicas }}
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

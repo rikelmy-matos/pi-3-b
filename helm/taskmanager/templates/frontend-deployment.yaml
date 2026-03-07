@@ -15,6 +15,11 @@ spec:
       labels:
         {{- include "taskmanager.frontend.selectorLabels" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ include "taskmanager.fullname" . }}-frontend
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
       containers:
         - name: frontend
           image: "{{ .Values.registry }}/{{ .Values.frontend.image }}:{{ .Values.frontend.tag }}"
@@ -23,15 +28,37 @@ spec:
             - containerPort: {{ .Values.frontend.port }}
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
           readinessProbe:
             httpGet:
               path: /
               port: {{ .Values.frontend.port }}
             initialDelaySeconds: 5
             periodSeconds: 10
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /
               port: {{ .Values.frontend.port }}
             initialDelaySeconds: 10
             periodSeconds: 20
+            failureThreshold: 3
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}

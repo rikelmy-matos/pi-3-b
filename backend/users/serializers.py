@@ -1,3 +1,5 @@
+from django.contrib.auth import password_validation
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User
@@ -21,7 +23,9 @@ class UserSerializer(serializers.ModelSerializer):
             "avatar_url",
             "created_at",
         ]
-        read_only_fields = ["id", "created_at", "full_name", "avatar_url"]
+        # SEC-15: avatar is write-only via multipart upload; never let clients
+        # set it as a raw string path through the serializer.
+        read_only_fields = ["id", "created_at", "full_name", "avatar_url", "avatar"]
 
     def get_avatar_url(self, obj):
         request = self.context.get("request")
@@ -45,12 +49,17 @@ class RegisterSerializer(serializers.ModelSerializer):
             "password_confirm",
         ]
 
-    def validate(self, data):
-        if data["password"] != data["password_confirm"]:
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError(
                 {"password_confirm": "Passwords do not match."}
             )
-        return data
+        # QUAL-3: run Django's AUTH_PASSWORD_VALIDATORS
+        try:
+            password_validation.validate_password(attrs["password"])
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)})
+        return attrs
 
     def create(self, validated_data):
         validated_data.pop("password_confirm")
@@ -72,16 +81,24 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError("Senha atual incorreta.")
         return value
 
-    def validate(self, data):
-        if data["new_password"] != data["new_password_confirm"]:
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password_confirm"]:
             raise serializers.ValidationError(
                 {"new_password_confirm": "As senhas não coincidem."}
             )
-        return data
+        # QUAL-4: run AUTH_PASSWORD_VALIDATORS on the new password
+        try:
+            password_validation.validate_password(
+                attrs["new_password"], user=self.context["request"].user
+            )
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"new_password": list(exc.messages)})
+        return attrs
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
-        data["user"] = UserSerializer(self.user).data
+        # QUAL-5: pass request context so avatar_url is built as an absolute URL
+        data["user"] = UserSerializer(self.user, context=self.context).data
         return data

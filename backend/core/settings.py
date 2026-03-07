@@ -11,11 +11,30 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-fallback-key")
+# ── Security ──────────────────────────────────────────────────────────────────
 
-DEBUG = os.getenv("DEBUG", "True") == "True"
+# SEC-1: Hard-fail at startup if SECRET_KEY is missing or insecure default
+_SECRET_KEY = os.getenv("SECRET_KEY", "")
+if (
+    not _SECRET_KEY
+    or "insecure" in _SECRET_KEY.lower()
+    or _SECRET_KEY == "django-insecure-fallback-key"
+):
+    raise RuntimeError(
+        "SECRET_KEY environment variable is not set or uses an insecure placeholder. "
+        "Set a strong random value in your .env file before starting the application."
+    )
+SECRET_KEY = _SECRET_KEY
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+# SEC-2: Default to False so production is never accidentally exposed
+DEBUG = os.getenv("DEBUG", "False") == "True"
+
+# SEC-8: ALLOWED_HOSTS must be set explicitly; no permissive wildcard default
+_ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "")
+ALLOWED_HOSTS = [h.strip() for h in _ALLOWED_HOSTS.split(",") if h.strip()] or [
+    "localhost",
+    "127.0.0.1",
+]
 
 # Application definition
 INSTALLED_APPS = [
@@ -28,6 +47,7 @@ INSTALLED_APPS = [
     # Third-party
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",  # SEC-3: enable token blacklisting
     "corsheaders",
     "django_filters",
     "drf_spectacular",
@@ -69,13 +89,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "core.wsgi.application"
 
-# Database - PostgreSQL
+# Database — PostgreSQL
+# SEC-9: No hardcoded password fallback
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME", "taskmanager"),
         "USER": os.getenv("DB_USER", "postgres"),
-        "PASSWORD": os.getenv("DB_PASSWORD", "postgres"),
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "5432"),
     }
@@ -105,7 +126,21 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "users.User"
 
-# Django REST Framework
+# ── Security headers (SEC-5) ──────────────────────────────────────────────────
+# These are enforced by Django's SecurityMiddleware.
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = "DENY"
+# Only activate HSTS and SSL redirect in production (not during local dev/tests).
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+# ── Django REST Framework ──────────────────────────────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -119,28 +154,37 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    # SEC-7: throttle auth endpoints against brute force
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "60/minute",
+        "user": "300/minute",
+    },
 }
 
-# JWT Configuration
+# ── JWT Configuration ─────────────────────────────────────────────────────────
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),  # SEC-11: reduced from 1h
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": False,
+    "BLACKLIST_AFTER_ROTATION": True,  # SEC-3: invalidate rotated refresh tokens
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-# CORS
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "https://sofplan.com.br",
-    "https://www.sofplan.com.br",
-]
+# ── CORS (SEC-6) ───────────────────────────────────────────────────────────────
+# Read from env; fall back to localhost dev origins only.
+_cors_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
+CORS_ALLOWED_ORIGINS = (
+    [o.strip() for o in _cors_env.split(",") if o.strip()]
+    if _cors_env
+    else ["http://localhost:5173", "http://127.0.0.1:5173"]
+)
 CORS_ALLOW_CREDENTIALS = True
 
-# drf-spectacular (OpenAPI docs)
+# ── drf-spectacular (SEC-10: gate behind DEBUG) ───────────────────────────────
 SPECTACULAR_SETTINGS = {
     "TITLE": "Task Manager API",
     "DESCRIPTION": "Sistema Gerenciador de Tarefas Online - PROMINESS LTDA",
