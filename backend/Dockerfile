@@ -31,6 +31,9 @@ COPY --from=builder /install /usr/local
 # SEC-29: copy source with correct ownership in one step (avoids chown -R after COPY)
 COPY --chown=appuser:appuser . .
 
+# Create media directory with correct ownership for avatar uploads
+RUN mkdir -p /app/media && chown appuser:appuser /app/media
+
 # Collect static files — SEC-27: dummy SECRET_KEY never baked into a named layer
 RUN SECRET_KEY=collect-static-dummy \
     DB_NAME=dummy DB_USER=dummy DB_PASSWORD=dummy DB_HOST=localhost \

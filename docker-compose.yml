@@ -36,6 +36,8 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
     # S2: backend port NOT exposed to host — only reachable via frontend proxy
+    volumes:
+      - media_data:/app/media
     networks:
       - backend-net
       - frontend-net
@@ -105,6 +107,7 @@ services:
 
 volumes:
   postgres_data:
+  media_data:
 
 networks:
   backend-net:

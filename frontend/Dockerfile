@@ -29,8 +29,8 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # nginxinc/nginx-unprivileged listens on 8080 by default
 EXPOSE 8080
 
-# B1: HEALTHCHECK
+# B1: HEALTHCHECK — curl is more reliable than wget in read_only containers
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -qO- http://localhost:8080/ || exit 1
+    CMD curl -sf http://127.0.0.1:8080/ -o /dev/null || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
