@@ -279,7 +279,7 @@ function OverviewTab({ project }: { project: Project }) {
 // Tab 1 — Orçamento
 // ══════════════════════════════════════════════════════════════════════════════
 
-function BudgetTab({ projectId }: { projectId: string }) {
+function BudgetTab({ projectId, canManage }: { projectId: string; canManage: boolean }) {
   const qc = useQueryClient();
   const { showToast } = useSnackbar();
   const { data: budget, isLoading, isError } = useQuery({
@@ -330,9 +330,11 @@ function BudgetTab({ projectId }: { projectId: string }) {
         <Typography variant="h6" fontWeight={600}>
           Orçamento do Projeto
         </Typography>
-        <Button startIcon={<EditIcon />} onClick={startEdit} variant="outlined" size="small">
-          {budget ? 'Editar' : 'Definir Orçamento'}
-        </Button>
+        {canManage && (
+          <Button startIcon={<EditIcon />} onClick={startEdit} variant="outlined" size="small">
+            {budget ? 'Editar' : 'Definir Orçamento'}
+          </Button>
+        )}
       </Box>
 
       {budget ? (
@@ -695,7 +697,7 @@ function TeamTab({
 
 const TECH_CATEGORIES: TechCategory[] = ['backend', 'frontend', 'database', 'infra', 'mobile', 'other'];
 
-function TechStackTab({ projectId }: { projectId: string }) {
+function TechStackTab({ projectId, canManage }: { projectId: string; canManage: boolean }) {
   const qc = useQueryClient();
   const { showToast } = useSnackbar();
   const { data: items = [], isLoading, isError } = useQuery({
@@ -754,9 +756,11 @@ function TechStackTab({ projectId }: { projectId: string }) {
         <Typography variant="h6" fontWeight={600}>
           Stack Tecnológica
         </Typography>
-        <Button startIcon={<AddIcon />} variant="outlined" size="small" onClick={openAdd}>
-          Adicionar
-        </Button>
+        {canManage && (
+          <Button startIcon={<AddIcon />} variant="outlined" size="small" onClick={openAdd}>
+            Adicionar
+          </Button>
+        )}
       </Box>
 
       {items.length === 0 && (
@@ -774,9 +778,9 @@ function TechStackTab({ projectId }: { projectId: string }) {
                 key={item.id}
                 label={item.version ? `${item.name} ${item.version}` : item.name}
                 variant="outlined"
-                onDelete={() => removeMutation.mutate(item.id)}
-                onClick={() => openEdit(item)}
-                sx={{ cursor: 'pointer' }}
+                onDelete={canManage ? () => removeMutation.mutate(item.id) : undefined}
+                onClick={canManage ? () => openEdit(item) : undefined}
+                sx={{ cursor: canManage ? 'pointer' : 'default' }}
               />
             ))}
           </Stack>
@@ -843,7 +847,7 @@ function TechStackTab({ projectId }: { projectId: string }) {
 // Tab 4 — Objetivos
 // ══════════════════════════════════════════════════════════════════════════════
 
-function ObjectivesTab({ projectId }: { projectId: string }) {
+function ObjectivesTab({ projectId, canManage }: { projectId: string; canManage: boolean }) {
   const qc = useQueryClient();
   const { showToast } = useSnackbar();
   const { data: items = [], isLoading, isError } = useQuery({
@@ -914,9 +918,11 @@ function ObjectivesTab({ projectId }: { projectId: string }) {
             />
           )}
         </Box>
-        <Button startIcon={<AddIcon />} variant="outlined" size="small" onClick={openAdd}>
-          Adicionar
-        </Button>
+        {canManage && (
+          <Button startIcon={<AddIcon />} variant="outlined" size="small" onClick={openAdd}>
+            Adicionar
+          </Button>
+        )}
       </Box>
 
       {items.length === 0 && (
@@ -957,12 +963,16 @@ function ObjectivesTab({ projectId }: { projectId: string }) {
               )}
             </Box>
             <Box display="flex" gap={0.5}>
-              <IconButton size="small" onClick={() => openEdit(obj)}>
-                <EditIcon fontSize="small" />
-              </IconButton>
-              <IconButton size="small" color="error" onClick={() => removeMutation.mutate(obj.id)}>
-                <DeleteIcon fontSize="small" />
-              </IconButton>
+              {canManage && (
+                <>
+                  <IconButton size="small" onClick={() => openEdit(obj)}>
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton size="small" color="error" onClick={() => removeMutation.mutate(obj.id)}>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </>
+              )}
             </Box>
           </Paper>
         ))}
@@ -1017,7 +1027,7 @@ function ObjectivesTab({ projectId }: { projectId: string }) {
 // Tab 5 — Riscos
 // ══════════════════════════════════════════════════════════════════════════════
 
-function RisksTab({ projectId }: { projectId: string }) {
+function RisksTab({ projectId, canManage }: { projectId: string; canManage: boolean }) {
   const qc = useQueryClient();
   const { showToast } = useSnackbar();
   const { data: items = [], isLoading, isError } = useQuery({
@@ -1085,9 +1095,11 @@ function RisksTab({ projectId }: { projectId: string }) {
         <Typography variant="h6" fontWeight={600}>
           Riscos
         </Typography>
-        <Button startIcon={<AddIcon />} variant="outlined" size="small" onClick={openAdd}>
-          Adicionar
-        </Button>
+        {canManage && (
+          <Button startIcon={<AddIcon />} variant="outlined" size="small" onClick={openAdd}>
+            Adicionar
+          </Button>
+        )}
       </Box>
 
       {items.length === 0 && (
@@ -1135,12 +1147,16 @@ function RisksTab({ projectId }: { projectId: string }) {
                 )}
               </Box>
               <Box display="flex" gap={0.5} ml={1}>
-                <IconButton size="small" onClick={() => openEdit(risk)}>
-                  <EditIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" color="error" onClick={() => removeMutation.mutate(risk.id)}>
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
+                {canManage && (
+                  <>
+                    <IconButton size="small" onClick={() => openEdit(risk)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={() => removeMutation.mutate(risk.id)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </>
+                )}
               </Box>
             </Box>
           </Paper>
@@ -1231,7 +1247,7 @@ function RisksTab({ projectId }: { projectId: string }) {
 // Tab 6 — Marcos (Milestones)
 // ══════════════════════════════════════════════════════════════════════════════
 
-function MilestonesTab({ projectId }: { projectId: string }) {
+function MilestonesTab({ projectId, canManage }: { projectId: string; canManage: boolean }) {
   const qc = useQueryClient();
   const { showToast } = useSnackbar();
   const { data: items = [], isLoading, isError } = useQuery({
@@ -1303,9 +1319,11 @@ function MilestonesTab({ projectId }: { projectId: string }) {
         <Typography variant="h6" fontWeight={600}>
           Marcos
         </Typography>
-        <Button startIcon={<AddIcon />} variant="outlined" size="small" onClick={openAdd}>
-          Adicionar
-        </Button>
+        {canManage && (
+          <Button startIcon={<AddIcon />} variant="outlined" size="small" onClick={openAdd}>
+            Adicionar
+          </Button>
+        )}
       </Box>
 
       {items.length === 0 && (
@@ -1348,12 +1366,16 @@ function MilestonesTab({ projectId }: { projectId: string }) {
                 </Box>
               </Box>
               <Box display="flex" gap={0.5} ml={1}>
-                <IconButton size="small" onClick={() => openEdit(ms)}>
-                  <EditIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" color="error" onClick={() => removeMutation.mutate(ms.id)}>
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
+                {canManage && (
+                  <>
+                    <IconButton size="small" onClick={() => openEdit(ms)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={() => removeMutation.mutate(ms.id)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </>
+                )}
               </Box>
             </Box>
           </Paper>
@@ -1596,22 +1618,22 @@ export default function ProjectDetailPage() {
         <OverviewTab project={project} />
       </TabPanel>
       <TabPanel value={tab} index={1}>
-        <BudgetTab projectId={project.id} />
+        <BudgetTab projectId={project.id} canManage={isOwnerOrAdmin} />
       </TabPanel>
       <TabPanel value={tab} index={2}>
         <TeamTab project={project} canManage={isOwnerOrAdmin} />
       </TabPanel>
       <TabPanel value={tab} index={3}>
-        <TechStackTab projectId={project.id} />
+        <TechStackTab projectId={project.id} canManage={isOwnerOrAdmin} />
       </TabPanel>
       <TabPanel value={tab} index={4}>
-        <ObjectivesTab projectId={project.id} />
+        <ObjectivesTab projectId={project.id} canManage={isOwnerOrAdmin} />
       </TabPanel>
       <TabPanel value={tab} index={5}>
-        <RisksTab projectId={project.id} />
+        <RisksTab projectId={project.id} canManage={isOwnerOrAdmin} />
       </TabPanel>
       <TabPanel value={tab} index={6}>
-        <MilestonesTab projectId={project.id} />
+        <MilestonesTab projectId={project.id} canManage={isOwnerOrAdmin} />
       </TabPanel>
     </Box>
   );
