@@ -12,9 +12,7 @@ metadata:
     # S12: Force HTTP → HTTPS redirect
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    # S13: HSTS
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+    # S13: HSTS is set globally in ingress-nginx ConfigMap (hsts: "true", hsts-max-age: "31536000", hsts-include-subdomains: "true")
 spec:
   ingressClassName: nginx
   tls:
