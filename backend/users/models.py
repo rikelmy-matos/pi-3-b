@@ -1,8 +1,11 @@
 import os
+import uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.db import models
+from django.utils import timezone
 
 # SEC-14: allowed avatar extensions
 _ALLOWED_AVATAR_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
@@ -53,3 +56,57 @@ class User(AbstractUser):
     @property
     def full_name(self):
         return self.get_full_name() or self.username
+
+
+class InviteToken(models.Model):
+    """
+    Single-use invite token that must be presented at registration.
+    Admin creates tokens in /admin/; each token can only be used once.
+    """
+
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    created_by = models.ForeignKey(
+        "users.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="invite_tokens",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Leave blank for a token that never expires.",
+    )
+    used = models.BooleanField(default=False)
+    used_by = models.OneToOneField(
+        "users.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="used_invite_token",
+    )
+    used_at = models.DateTimeField(null=True, blank=True)
+    note = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Optional note (e.g. who this invite is for).",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Invite Token"
+        verbose_name_plural = "Invite Tokens"
+
+    def __str__(self):
+        status = "used" if self.used else "active"
+        return f"{self.token} [{status}]"
+
+    @property
+    def is_valid(self):
+        """True when the token has not been used and has not expired."""
+        if self.used:
+            return False
+        if self.expires_at and self.expires_at < timezone.now():
+            return False
+        return True

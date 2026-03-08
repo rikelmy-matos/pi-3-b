@@ -1,8 +1,10 @@
 from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User
+
+from .models import InviteToken, User
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -37,6 +39,7 @@ class UserSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True)
+    invite_token = serializers.UUIDField(write_only=True)
 
     class Meta:
         model = User
@@ -47,7 +50,19 @@ class RegisterSerializer(serializers.ModelSerializer):
             "last_name",
             "password",
             "password_confirm",
+            "invite_token",
         ]
+
+    def validate_invite_token(self, value):
+        try:
+            token_obj = InviteToken.objects.get(token=value)
+        except InviteToken.DoesNotExist:
+            raise serializers.ValidationError("Token de convite inválido.")
+        if not token_obj.is_valid:
+            raise serializers.ValidationError(
+                "Token de convite já utilizado ou expirado."
+            )
+        return token_obj  # pass the object forward so create() can consume it
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:
@@ -62,11 +77,17 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        token_obj = validated_data.pop("invite_token")
         validated_data.pop("password_confirm")
         password = validated_data.pop("password")
         user = User(**validated_data)
         user.set_password(password)
         user.save()
+        # Mark token as consumed
+        token_obj.used = True
+        token_obj.used_by = user
+        token_obj.used_at = timezone.now()
+        token_obj.save(update_fields=["used", "used_by", "used_at"])
         return user
 
 
