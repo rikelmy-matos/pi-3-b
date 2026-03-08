@@ -139,6 +139,10 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    # Trust the X-Forwarded-Proto header set by ingress-nginx.
+    # Without this Django sees every request as HTTP (ingress talks to it over
+    # plain HTTP internally) and issues a 301 redirect loop on all POST requests.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # ── Django REST Framework ──────────────────────────────────────────────────────
 REST_FRAMEWORK = {
