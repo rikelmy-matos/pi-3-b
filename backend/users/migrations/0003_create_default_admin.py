@@ -1,6 +1,6 @@
 """
 Data migration: create a default superuser admin/admin if it does not already exist.
-Credentials: username=admin, email=admin@localhost, password=admin, is_staff=True, is_superuser=True.
+Credentials: username=admin, email=admin@admin.com, password=admin, is_staff=True, is_superuser=True.
 Change the password immediately after first login.
 """
 
@@ -17,7 +17,7 @@ def create_default_admin(apps, schema_editor):
 
     User.objects.create(
         username="admin",
-        email="admin@localhost",
+        email="admin@admin.com",
         first_name="Admin",
         last_name="",
         password=make_password("admin"),
