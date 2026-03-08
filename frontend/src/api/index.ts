@@ -269,4 +269,7 @@ export const adminApi = {
 
   deleteInviteToken: (id: number) =>
     apiClient.delete(`/auth/admin/invite-tokens/${id}/`),
+
+  deleteUser: (userId: number) =>
+    apiClient.delete(`/auth/admin/users/${userId}/delete/`),
 };

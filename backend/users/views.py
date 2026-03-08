@@ -127,6 +127,27 @@ class AdminUserSetStaffView(APIView):
         return Response(UserSerializer(target, context={"request": request}).data)
 
 
+class AdminUserDeleteView(APIView):
+    """Staff-only: delete a non-staff user account."""
+
+    permission_classes = [IsStaff]
+
+    def delete(self, request, user_id):
+        if request.user.id == user_id:
+            return Response(
+                {"detail": "Você não pode excluir sua própria conta."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        target = get_object_or_404(User, id=user_id)
+        if target.is_staff:
+            return Response(
+                {"detail": "Não é possível excluir um usuário staff."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        target.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class AdminInviteTokenListCreateView(generics.ListCreateAPIView):
     """Staff-only: list all invite tokens and create new ones."""
 

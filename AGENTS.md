@@ -347,7 +347,7 @@ kubectl logs -n taskmanager deploy/taskmanager-backend
 - **Backend image has no volume mount** — always run `docker compose build backend` then
   `docker compose up -d --no-deps backend` after editing backend source, then rerun tests
   via `docker compose exec backend python manage.py test`
-- **67 backend tests** all pass (projects: 22, tasks: 18, users: 27)
+- **71 backend tests** all pass (projects: 22, tasks: 18, users: 28)
 - **Default admin user** seeded by migration `0003_create_default_admin`: `email=admin@admin.com`,
   `username=admin`, `password=admin`, `is_staff=True`, `is_superuser=True` — change password on first login
 - Login field is **email** (not username) — `User.USERNAME_FIELD = 'email'`

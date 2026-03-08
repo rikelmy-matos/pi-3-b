@@ -54,6 +54,7 @@ function UsersTab() {
   const { user: me } = useAuth();
   const qc = useQueryClient();
   const { showToast } = useSnackbar();
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; email: string } | null>(null);
 
   const { data: users, isLoading, error } = useQuery({
     queryKey: ['admin', 'users'],
@@ -75,72 +76,123 @@ function UsersTab() {
     onError: () => showToast('Erro ao atualizar permissão.', 'error'),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (userId: number) => adminApi.deleteUser(userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+      showToast('Usuário excluído.', 'success');
+      setDeleteTarget(null);
+    },
+    onError: () => showToast('Erro ao excluir usuário.', 'error'),
+  });
+
   if (isLoading) return <Box p={4} display="flex" justifyContent="center"><CircularProgress /></Box>;
   if (error) return <Alert severity="error">Erro ao carregar usuários.</Alert>;
 
   return (
-    <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3 }}>
-      <Table size="small">
-        <TableHead>
-          <TableRow sx={{ bgcolor: 'rgba(108,99,255,0.06)' }}>
-            <TableCell sx={{ fontWeight: 700 }}>Nome</TableCell>
-            <TableCell sx={{ fontWeight: 700 }}>E-mail</TableCell>
-            <TableCell sx={{ fontWeight: 700 }}>Username</TableCell>
-            <TableCell sx={{ fontWeight: 700 }}>Criado em</TableCell>
-            <TableCell sx={{ fontWeight: 700 }} align="center">Staff</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {(users ?? []).map((u) => {
-            const isSelf = u.id === me?.id;
-            return (
-              <TableRow key={u.id} hover>
-                <TableCell>
-                  {u.first_name || u.last_name
-                    ? `${u.first_name} ${u.last_name}`.trim()
-                    : '—'}
-                </TableCell>
-                <TableCell>{u.email}</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>
-                  {u.username}
-                </TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>
-                  {fmtDate(u.created_at)}
-                </TableCell>
-                <TableCell align="center">
-                  <Tooltip title={isSelf ? 'Não é possível alterar a própria permissão' : ''}>
-                    <span>
-                      <Switch
-                        checked={u.is_staff}
-                        disabled={isSelf || setStaffMutation.isPending}
-                        onChange={(e) =>
-                          setStaffMutation.mutate({ userId: u.id, isStaff: e.target.checked })
-                        }
-                        color="primary"
+    <>
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3 }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ bgcolor: 'rgba(108,99,255,0.06)' }}>
+              <TableCell sx={{ fontWeight: 700 }}>Nome</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>E-mail</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Username</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Criado em</TableCell>
+              <TableCell sx={{ fontWeight: 700 }} align="center">Staff</TableCell>
+              <TableCell />
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {(users ?? []).map((u) => {
+              const isSelf = u.id === me?.id;
+              return (
+                <TableRow key={u.id} hover>
+                  <TableCell>
+                    {u.first_name || u.last_name
+                      ? `${u.first_name} ${u.last_name}`.trim()
+                      : '—'}
+                  </TableCell>
+                  <TableCell>{u.email}</TableCell>
+                  <TableCell sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>
+                    {u.username}
+                  </TableCell>
+                  <TableCell sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>
+                    {fmtDate(u.created_at)}
+                  </TableCell>
+                  <TableCell align="center">
+                    <Tooltip title={isSelf ? 'Não é possível alterar a própria permissão' : ''}>
+                      <span>
+                        <Switch
+                          checked={u.is_staff}
+                          disabled={isSelf || setStaffMutation.isPending}
+                          onChange={(e) =>
+                            setStaffMutation.mutate({ userId: u.id, isStaff: e.target.checked })
+                          }
+                          color="primary"
+                          size="small"
+                        />
+                      </span>
+                    </Tooltip>
+                    {u.is_staff && (
+                      <Chip
+                        label="staff"
                         size="small"
+                        sx={{
+                          ml: 0.5,
+                          bgcolor: '#EDE9FE',
+                          color: '#4B44CC',
+                          fontWeight: 700,
+                          fontSize: '0.68rem',
+                        }}
                       />
-                    </span>
-                  </Tooltip>
-                  {u.is_staff && (
-                    <Chip
-                      label="staff"
-                      size="small"
-                      sx={{
-                        ml: 0.5,
-                        bgcolor: '#EDE9FE',
-                        color: '#4B44CC',
-                        fontWeight: 700,
-                        fontSize: '0.68rem',
-                      }}
-                    />
-                  )}
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </TableContainer>
+                    )}
+                  </TableCell>
+                  <TableCell align="right">
+                    {!isSelf && !u.is_staff && (
+                      <Tooltip title="Excluir usuário">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => setDeleteTarget({ id: u.id, email: u.email })}
+                        >
+                          <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Confirm delete dialog */}
+      <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} maxWidth="xs" fullWidth>
+        <DialogTitle fontWeight={700}>Excluir usuário</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Tem certeza que deseja excluir o usuário{' '}
+            <strong>{deleteTarget?.email}</strong>? Esta ação não pode ser desfeita.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={deleteMutation.isPending}
+            onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+          >
+            {deleteMutation.isPending ? 'Excluindo…' : 'Excluir'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
 

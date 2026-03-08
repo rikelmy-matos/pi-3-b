@@ -186,6 +186,39 @@ class AdminSetStaffTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
+class AdminUserDeleteTest(APITestCase):
+    def setUp(self):
+        self.staff = _make_staff()
+        self.regular = _make_regular()
+        self.url = reverse("admin_user_delete", args=[self.regular.id])
+
+    def test_staff_can_delete_regular_user(self):
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(id=self.regular.id).exists())
+
+    def test_staff_cannot_delete_self(self):
+        self.client.force_authenticate(user=self.staff)
+        own_url = reverse("admin_user_delete", args=[self.staff.id])
+        response = self.client.delete(own_url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(User.objects.filter(id=self.staff.id).exists())
+
+    def test_staff_cannot_delete_another_staff(self):
+        other_staff = _make_staff(email="other@example.com", username="other")
+        self.client.force_authenticate(user=self.staff)
+        url = reverse("admin_user_delete", args=[other_staff.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(User.objects.filter(id=other_staff.id).exists())
+
+    def test_regular_cannot_delete_user(self):
+        self.client.force_authenticate(user=self.regular)
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
 class AdminInviteTokenTest(APITestCase):
     url = reverse("admin_invite_token_list")
 

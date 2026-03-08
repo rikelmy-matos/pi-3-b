@@ -3,6 +3,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     AdminInviteTokenDeleteView,
     AdminInviteTokenListCreateView,
+    AdminUserDeleteView,
     AdminUserListView,
     AdminUserSetStaffView,
     AvatarView,
@@ -27,6 +28,11 @@ urlpatterns = [
         "admin/users/<int:user_id>/set-staff/",
         AdminUserSetStaffView.as_view(),
         name="admin_user_set_staff",
+    ),
+    path(
+        "admin/users/<int:user_id>/delete/",
+        AdminUserDeleteView.as_view(),
+        name="admin_user_delete",
     ),
     path(
         "admin/invite-tokens/",
