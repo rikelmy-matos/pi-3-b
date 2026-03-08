@@ -2,17 +2,15 @@
 
 # Container registry
 registry: ghcr.io/rikelmy-matos/pi-3-b
-
 # imagePullSecrets for private registries (e.g. GHCR).
 # Each entry is a name reference to an existing Secret of type kubernetes.io/dockerconfigjson.
 # Example:
 #   imagePullSecrets:
 #     - name: ghcr-pull-secret
 imagePullSecrets: []
-
 backend:
   image: backend
-  tag: latest
+  tag: sha-1c8bb28
   replicas: 1
   port: 8000
   media:
@@ -25,10 +23,9 @@ backend:
     limits:
       cpu: "500m"
       memory: "512Mi"
-
 frontend:
   image: frontend
-  tag: latest
+  tag: sha-1c8bb28
   replicas: 1
   port: 8080
   resources:
@@ -38,7 +35,6 @@ frontend:
     limits:
       cpu: "200m"
       memory: "128Mi"
-
 postgres:
   image: postgres
   tag: "16-alpine"
@@ -52,12 +48,10 @@ postgres:
     limits:
       cpu: "500m"
       memory: "512Mi"
-
 ingress:
   host: sofplan.com.br
   tlsSecret: sofplan-tls
   clusterIssuer: letsencrypt-prod
-
 # Non-secret environment config (goes in ConfigMap)
 config:
   debug: "False"
@@ -67,7 +61,6 @@ config:
   # dbHost is derived from the release name at render time (see configmap.yaml)
   dbPort: "5432"
   corsOrigins: "https://sofplan.com.br,https://www.sofplan.com.br"
-
 # Secret values
 # set create: false when using Sealed Secrets / External Secrets Operator in GitOps
 # The Secret must be named: <Release.Name>-secret with keys SECRET_KEY and DB_PASSWORD
