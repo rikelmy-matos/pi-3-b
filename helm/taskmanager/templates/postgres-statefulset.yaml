@@ -22,9 +22,6 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 999
-        runAsGroup: 999
         fsGroup: 999
       initContainers:
         - name: fix-permissions
@@ -35,6 +32,7 @@ spec:
               mountPath: /var/lib/postgresql/data
           securityContext:
             runAsUser: 0
+            runAsNonRoot: false
             allowPrivilegeEscalation: false
       containers:
         - name: postgres
@@ -54,6 +52,9 @@ spec:
           resources:
             {{- toYaml .Values.postgres.resources | nindent 12 }}
           securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            runAsGroup: 999
             allowPrivilegeEscalation: false
             capabilities:
               drop:
