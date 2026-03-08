@@ -58,8 +58,11 @@ class AvatarView(APIView):
 
 class UserListView(generics.ListAPIView):
     """
-    SEC-16: Return only users that share at least one project with the requester.
-    This prevents enumerating every account in the system.
+    SEC-16: Search-gated user lookup for the "add member" flow.
+    Requires a ?search= param of at least 2 characters so this endpoint
+    cannot be used to enumerate all accounts in one request, but still
+    allows discovering any user by name/email (needed to invite new members
+    who share no projects yet).
     """
 
     serializer_class = UserSerializer
@@ -67,15 +70,7 @@ class UserListView(generics.ListAPIView):
     search_fields = ["email", "first_name", "last_name", "username"]
 
     def get_queryset(self):
-        from projects.models import Project
-
-        # IDs of all projects the current user is a member of
-        my_project_ids = Project.objects.filter(
-            members__user=self.request.user
-        ).values_list("id", flat=True)
-        # All users (except self) who are members of those same projects
-        return (
-            User.objects.filter(project_memberships__project_id__in=my_project_ids)
-            .exclude(id=self.request.user.id)
-            .distinct()
-        )
+        search = self.request.query_params.get("search", "").strip()
+        if len(search) < 2:
+            return User.objects.none()
+        return User.objects.exclude(id=self.request.user.id)
