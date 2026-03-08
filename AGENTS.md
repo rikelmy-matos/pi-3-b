@@ -219,6 +219,10 @@ CREATE DATABASE taskmanager;
 | GET/PATCH/DELETE | `/api/v1/tasks/{id}/` | Task detail |
 | PATCH | `/api/v1/tasks/{id}/move/` | Move task (Kanban drag) |
 | GET/POST | `/api/v1/tasks/{id}/comments/` | Task comments |
+| GET | `/api/v1/auth/admin/users/` | List all users (staff only) |
+| PATCH | `/api/v1/auth/admin/users/{id}/set-staff/` | Promote/demote staff (staff only) |
+| GET/POST | `/api/v1/auth/admin/invite-tokens/` | List / create invite tokens (staff only) |
+| DELETE | `/api/v1/auth/admin/invite-tokens/{id}/` | Revoke invite token (staff only) |
 
 Docs available at `http://localhost:8000/api/docs/` (Swagger UI).
 
@@ -343,4 +347,20 @@ kubectl logs -n taskmanager deploy/taskmanager-backend
 - **Backend image has no volume mount** — always run `docker compose build backend` then
   `docker compose up -d --no-deps backend` after editing backend source, then rerun tests
   via `docker compose exec backend python manage.py test`
-- **43 backend tests** all pass (projects: 22, tasks: 18, users: 3)
+- **67 backend tests** all pass (projects: 22, tasks: 18, users: 27)
+- **Default admin user** seeded by migration `0003_create_default_admin`: `email=admin@admin.com`,
+  `username=admin`, `password=admin`, `is_staff=True`, `is_superuser=True` — change password on first login
+- Login field is **email** (not username) — `User.USERNAME_FIELD = 'email'`
+- `InviteToken` model (single-use UUID, optional expiry) gates registration; staff manages tokens via admin panel
+- `IsStaff` custom permission class in `users/views.py` guards all `auth/admin/` endpoints
+- Admin panel at `/admin` (`src/pages/admin/AdminPage.tsx`) — staff-only, two tabs: Usuários + Tokens de Convite
+- `StaffRoute` guard in `App.tsx` redirects non-staff away from `/admin`
+- Sidebar "Administração" nav item (`AdminPanelSettingsIcon`) visible only when `user?.is_staff === true`
+- `SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")` set in `settings.py` when `not DEBUG`
+  so Django trusts the `X-Forwarded-Proto` header from ingress-nginx
+- Helm `values.yaml` `backend.tag` and `frontend.tag` are auto-updated by CI (`update-helm` job in
+  `.github/workflows/build-push.yml`) to pin exact image SHAs after every build
+- Ingress host: `sofplan.com.br`; `allowedHosts` includes `sofplan.com.br,www.sofplan.com.br`
+- Backend/frontend probes use TCP exec (not HTTP) to avoid ALLOWED_HOSTS 400 errors during startup
+- Postgres StatefulSet has an initContainer to `chown` the data dir for `local-path` provisioner
+- `configuration-snippet` ingress annotation removed — disabled in ingress-nginx v1.12+
