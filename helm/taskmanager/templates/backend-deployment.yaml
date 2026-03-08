@@ -89,23 +89,20 @@ spec:
             - name: media
               mountPath: /app/media
           startupProbe:
-            httpGet:
-              path: /api/v1/health/
-              port: {{ .Values.backend.port }}
+            exec:
+              command: ["python", "-c", "import socket; socket.create_connection(('localhost', {{ .Values.backend.port }}))"]
             initialDelaySeconds: 10
             periodSeconds: 5
             failureThreshold: 12
           readinessProbe:
-            httpGet:
-              path: /api/v1/health/
-              port: {{ .Values.backend.port }}
+            exec:
+              command: ["python", "-c", "import socket; socket.create_connection(('localhost', {{ .Values.backend.port }}))"]
             initialDelaySeconds: 5
             periodSeconds: 10
             failureThreshold: 3
           livenessProbe:
-            httpGet:
-              path: /api/v1/health/
-              port: {{ .Values.backend.port }}
+            exec:
+              command: ["python", "-c", "import socket; socket.create_connection(('localhost', {{ .Values.backend.port }}))"]
             initialDelaySeconds: 30
             periodSeconds: 20
             failureThreshold: 3
