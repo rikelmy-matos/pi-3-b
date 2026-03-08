@@ -4,9 +4,9 @@ metadata:
   name: {{ include "taskmanager.fullname" . }}-postgres
   labels:
     {{- include "taskmanager.labels" . | nindent 4 }}
-    {{- include "taskmanager.postgres.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
 spec:
-  serviceName: postgres
+  serviceName: {{ include "taskmanager.fullname" . }}-postgres
   replicas: 1
   selector:
     matchLabels:
@@ -17,6 +17,10 @@ spec:
         {{- include "taskmanager.postgres.selectorLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "taskmanager.fullname" . }}-postgres
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 999

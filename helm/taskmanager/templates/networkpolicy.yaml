@@ -1,7 +1,8 @@
 # M2: NetworkPolicy — restrict pod-to-pod traffic
-# frontend → backend only (port 8000)
-# backend → postgres only (port 5432)
-# postgres: no egress needed
+# frontend → backend (port 8000)
+# ingress-nginx controller → backend (port 8000) — required for Ingress routing and ArgoCD health checks
+# backend → postgres (port 5432)
+# postgres: no egress
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -16,10 +17,19 @@ spec:
     - Ingress
     - Egress
   ingress:
+    # from frontend pods in the same namespace
     - from:
         - podSelector:
             matchLabels:
               {{- include "taskmanager.frontend.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.port }}
+    # from ingress-nginx controller (any namespace) — needed for Ingress rules and ArgoCD probes
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
       ports:
         - protocol: TCP
           port: {{ .Values.backend.port }}
@@ -32,9 +42,11 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.postgres.port }}
-    # backend → DNS
+    # DNS
     - ports:
         - protocol: UDP
+          port: 53
+        - protocol: TCP
           port: 53
 ---
 apiVersion: networking.k8s.io/v1

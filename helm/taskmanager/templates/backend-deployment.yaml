@@ -4,7 +4,7 @@ metadata:
   name: {{ include "taskmanager.fullname" . }}-backend
   labels:
     {{- include "taskmanager.labels" . | nindent 4 }}
-    {{- include "taskmanager.backend.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
 spec:
   replicas: {{ .Values.backend.replicas }}
   selector:
@@ -16,11 +16,45 @@ spec:
         {{- include "taskmanager.backend.selectorLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "taskmanager.fullname" . }}-backend
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+      initContainers:
+        - name: migrate
+          image: "{{ .Values.registry }}/{{ .Values.backend.image }}:{{ .Values.backend.tag }}"
+          imagePullPolicy: Always
+          command: ["python", "manage.py", "migrate", "--noinput"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "taskmanager.fullname" . }}-config
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "taskmanager.fullname" . }}-secret
+                  key: SECRET_KEY
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "taskmanager.fullname" . }}-secret
+                  key: DB_PASSWORD
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
       containers:
         - name: backend
           image: "{{ .Values.registry }}/{{ .Values.backend.image }}:{{ .Values.backend.tag }}"
@@ -79,4 +113,5 @@ spec:
         - name: tmp
           emptyDir: {}
         - name: media
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: {{ include "taskmanager.fullname" . }}-media

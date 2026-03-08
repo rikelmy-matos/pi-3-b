@@ -9,6 +9,6 @@ data:
   ALLOWED_HOSTS: {{ .Values.config.allowedHosts | quote }}
   DB_NAME: {{ .Values.config.dbName | quote }}
   DB_USER: {{ .Values.config.dbUser | quote }}
-  DB_HOST: {{ .Values.config.dbHost | quote }}
+  DB_HOST: {{ printf "%s-postgres" (include "taskmanager.fullname" .) | quote }}
   DB_PORT: {{ .Values.config.dbPort | quote }}
   CORS_ALLOWED_ORIGINS: {{ .Values.config.corsOrigins | quote }}
