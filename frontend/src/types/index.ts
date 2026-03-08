@@ -10,6 +10,7 @@ export interface User {
   bio: string;
   avatar: string | null;
   avatar_url: string | null;
+  is_staff: boolean;
   created_at: string;
 }
 
@@ -166,6 +167,20 @@ export interface RegisterData {
   last_name: string;
   password: string;
   password_confirm: string;
+  invite_token: string;
+}
+
+export interface InviteToken {
+  id: number;
+  token: string;
+  note: string;
+  created_by_email: string | null;
+  created_at: string;
+  expires_at: string | null;
+  used: boolean;
+  used_by_email: string | null;
+  used_at: string | null;
+  is_valid: boolean;
 }
 
 export interface AuthTokens {

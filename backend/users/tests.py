@@ -19,6 +19,27 @@ def _register_payload(**overrides):
     return base
 
 
+def _make_staff(**kwargs):
+    return User.objects.create_user(
+        email=kwargs.get("email", "staffuser@example.com"),
+        username=kwargs.get("username", "staffuser"),
+        password="AdminPass123!",
+        first_name="Staff",
+        last_name="User",
+        is_staff=True,
+    )
+
+
+def _make_regular(**kwargs):
+    return User.objects.create_user(
+        email=kwargs.get("email", "regular@example.com"),
+        username=kwargs.get("username", "regular"),
+        password="RegularPass123!",
+        first_name="Regular",
+        last_name="User",
+    )
+
+
 class InviteTokenModelTest(APITestCase):
     def test_is_valid_fresh_token(self):
         token = InviteToken.objects.create()
@@ -98,3 +119,109 @@ class RegisterWithInviteTokenTest(APITestCase):
         response = self.client.post(self.url, payload2)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("invite_token", response.data)
+
+
+class AdminUserListTest(APITestCase):
+    url = reverse("admin_user_list")
+
+    def setUp(self):
+        self.staff = _make_staff()
+        self.regular = _make_regular()
+
+    def test_staff_can_list_all_users(self):
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        emails = [u["email"] for u in response.data["results"]]
+        self.assertIn(self.staff.email, emails)
+        self.assertIn(self.regular.email, emails)
+
+    def test_regular_user_cannot_list_all_users(self):
+        self.client.force_authenticate(user=self.regular)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthenticated_cannot_list_users(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_user_list_contains_is_staff_field(self):
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.get(self.url)
+        first = response.data["results"][0]
+        self.assertIn("is_staff", first)
+
+
+class AdminSetStaffTest(APITestCase):
+    def setUp(self):
+        self.staff = _make_staff()
+        self.regular = _make_regular()
+        self.url = reverse("admin_user_set_staff", args=[self.regular.id])
+
+    def test_staff_can_promote_user(self):
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.patch(self.url, {"is_staff": True}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.regular.refresh_from_db()
+        self.assertTrue(self.regular.is_staff)
+
+    def test_staff_can_demote_user(self):
+        self.regular.is_staff = True
+        self.regular.save()
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.patch(self.url, {"is_staff": False}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.regular.refresh_from_db()
+        self.assertFalse(self.regular.is_staff)
+
+    def test_staff_cannot_change_own_status(self):
+        self.client.force_authenticate(user=self.staff)
+        own_url = reverse("admin_user_set_staff", args=[self.staff.id])
+        response = self.client.patch(own_url, {"is_staff": False}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_regular_user_cannot_set_staff(self):
+        self.client.force_authenticate(user=self.regular)
+        response = self.client.patch(self.url, {"is_staff": True}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class AdminInviteTokenTest(APITestCase):
+    url = reverse("admin_invite_token_list")
+
+    def setUp(self):
+        self.staff = _make_staff()
+        self.regular = _make_regular()
+
+    def test_staff_can_list_tokens(self):
+        InviteToken.objects.create(created_by=self.staff, note="test")
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["results"][0]["note"], "test")
+
+    def test_staff_can_create_token(self):
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.post(self.url, {"note": "for João"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("token", response.data)
+        obj = InviteToken.objects.get(token=response.data["token"])
+        self.assertEqual(obj.created_by, self.staff)
+
+    def test_staff_can_delete_token(self):
+        token = InviteToken.objects.create(created_by=self.staff)
+        delete_url = reverse("admin_invite_token_delete", args=[token.id])
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.delete(delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(InviteToken.objects.filter(id=token.id).exists())
+
+    def test_regular_cannot_list_tokens(self):
+        self.client.force_authenticate(user=self.regular)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_regular_cannot_create_token(self):
+        self.client.force_authenticate(user=self.regular)
+        response = self.client.post(self.url, {"note": "hack"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

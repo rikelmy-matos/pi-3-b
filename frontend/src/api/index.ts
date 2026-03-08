@@ -4,6 +4,7 @@ import type {
   LoginCredentials,
   RegisterData,
   User,
+  InviteToken,
   Project,
   Task,
   Comment,
@@ -238,4 +239,34 @@ export const membersApi = {
     apiClient
       .get<MemberOverview[]>(`/projects/${projectId}/members-overview/`)
       .then((r) => r.data),
+};
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+export const adminApi = {
+  listUsers: () =>
+    apiClient
+      .get<PaginatedResponse<User>>('/auth/admin/users/')
+      .then((r) => r.data.results),
+
+  setStaff: (userId: number, isStaff: boolean) =>
+    apiClient
+      .patch<User>(`/auth/admin/users/${userId}/set-staff/`, { is_staff: isStaff })
+      .then((r) => r.data),
+
+  listInviteTokens: () =>
+    apiClient
+      .get<PaginatedResponse<InviteToken>>('/auth/admin/invite-tokens/')
+      .then((r) => r.data.results),
+
+  createInviteToken: (note: string, expiresAt?: string) =>
+    apiClient
+      .post<InviteToken>('/auth/admin/invite-tokens/', {
+        note,
+        ...(expiresAt ? { expires_at: expiresAt } : {}),
+      })
+      .then((r) => r.data),
+
+  deleteInviteToken: (id: number) =>
+    apiClient.delete(`/auth/admin/invite-tokens/${id}/`),
 };

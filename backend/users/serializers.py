@@ -23,17 +23,55 @@ class UserSerializer(serializers.ModelSerializer):
             "bio",
             "avatar",
             "avatar_url",
+            "is_staff",
             "created_at",
         ]
         # SEC-15: avatar_url is always read-only (computed). The avatar ImageField
         # itself enforces valid image files only — no need to make it read-only here.
-        read_only_fields = ["id", "created_at", "full_name", "avatar_url"]
+        read_only_fields = ["id", "created_at", "full_name", "avatar_url", "is_staff"]
 
     def get_avatar_url(self, obj):
         request = self.context.get("request")
         if obj.avatar and request:
             return request.build_absolute_uri(obj.avatar.url)
         return None
+
+
+class InviteTokenSerializer(serializers.ModelSerializer):
+    created_by_email = serializers.SerializerMethodField()
+    used_by_email = serializers.SerializerMethodField()
+    is_valid = serializers.ReadOnlyField()
+
+    class Meta:
+        model = InviteToken
+        fields = [
+            "id",
+            "token",
+            "note",
+            "created_by_email",
+            "created_at",
+            "expires_at",
+            "used",
+            "used_by_email",
+            "used_at",
+            "is_valid",
+        ]
+        read_only_fields = [
+            "id",
+            "token",
+            "created_at",
+            "used",
+            "used_by_email",
+            "used_at",
+            "is_valid",
+            "created_by_email",
+        ]
+
+    def get_created_by_email(self, obj):
+        return obj.created_by.email if obj.created_by else None
+
+    def get_used_by_email(self, obj):
+        return obj.used_by.email if obj.used_by else None
 
 
 class RegisterSerializer(serializers.ModelSerializer):

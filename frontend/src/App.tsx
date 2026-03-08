@@ -14,6 +14,7 @@ import KanbanBoard from './pages/tasks/KanbanBoard';
 import CalendarPage from './pages/tasks/CalendarPage';
 import MembersPage from './pages/projects/MembersPage';
 import ProjectDetailPage from './pages/projects/ProjectDetailPage';
+import AdminPage from './pages/admin/AdminPage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 1000 * 60 } },
@@ -105,6 +106,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
+function StaffRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  return user?.is_staff ? <>{children}</> : <Navigate to="/" replace />;
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -128,6 +135,14 @@ function AppRoutes() {
         <Route path="/projects/:projectId/overview" element={<ProjectDetailPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route
+          path="/admin"
+          element={
+            <StaffRoute>
+              <AdminPage />
+            </StaffRoute>
+          }
+        />
       </Route>
 
       {/* Fallback */}

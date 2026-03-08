@@ -16,6 +16,7 @@ import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import VpnKeyOutlinedIcon from '@mui/icons-material/VpnKeyOutlined';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
@@ -35,6 +36,7 @@ export default function RegisterPage() {
     last_name: '',
     password: '',
     password_confirm: '',
+    invite_token: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -236,6 +238,25 @@ export default function RegisterPage() {
                           <IconButton onClick={() => setShowConfirm((v) => !v)} edge="end" size="small">
                             {showConfirm ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                           </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid size={12}>
+                  <TextField
+                    label="Token de convite"
+                    name="invite_token"
+                    fullWidth
+                    required
+                    value={form.invite_token}
+                    onChange={handleChange}
+                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                    helperText="Solicite um token de convite ao administrador."
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <VpnKeyOutlinedIcon fontSize="small" color="action" />
                         </InputAdornment>
                       ),
                     }}

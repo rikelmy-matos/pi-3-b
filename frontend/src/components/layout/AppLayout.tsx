@@ -18,17 +18,24 @@ import {
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import FolderIcon from '@mui/icons-material/Folder';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import MenuIcon from '@mui/icons-material/Menu';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useAuth } from '../../context/AuthContext';
 
 const DRAWER_WIDTH = 248;
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { label: 'Dashboard', to: '/', icon: <DashboardIcon /> },
   { label: 'Projetos', to: '/projects', icon: <FolderIcon /> },
   { label: 'Calendário', to: '/calendar', icon: <CalendarMonthIcon /> },
 ];
+
+const ADMIN_NAV_ITEM = {
+  label: 'Administração',
+  to: '/admin',
+  icon: <AdminPanelSettingsIcon />,
+};
 
 // Indigo-violet sidebar palette
 const SIDEBAR_BG = '#4B44CC';
@@ -46,6 +53,10 @@ export default function AppLayout() {
 
   const initials =
     (user?.first_name?.[0] ?? '') + (user?.last_name?.[0] ?? user?.username?.[0] ?? 'U');
+
+  const navItems = user?.is_staff
+    ? [...BASE_NAV_ITEMS, ADMIN_NAV_ITEM]
+    : BASE_NAV_ITEMS;
 
   const isActive = (to: string) => {
     if (to === '/') return location.pathname === '/';
@@ -96,7 +107,7 @@ export default function AppLayout() {
 
       {/* Nav */}
       <List sx={{ flex: 1, px: 0.5 }}>
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const active = isActive(item.to);
           return (
             <ListItemButton

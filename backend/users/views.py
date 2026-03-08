@@ -1,15 +1,26 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import User
+from .models import InviteToken, User
 from .serializers import (
-    RegisterSerializer,
-    UserSerializer,
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
+    InviteTokenSerializer,
+    RegisterSerializer,
+    UserSerializer,
 )
+
+
+class IsStaff(permissions.BasePermission):
+    """Allow access only to staff (admin) users."""
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user and request.user.is_authenticated and request.user.is_staff
+        )
 
 
 class RegisterView(generics.CreateAPIView):
@@ -74,3 +85,66 @@ class UserListView(generics.ListAPIView):
         if len(search) < 2:
             return User.objects.none()
         return User.objects.exclude(id=self.request.user.id)
+
+
+# ── Admin-only views ──────────────────────────────────────────────────────────
+
+
+class AdminUserListView(generics.ListAPIView):
+    """Staff-only: list ALL users with is_staff flag."""
+
+    serializer_class = UserSerializer
+    permission_classes = [IsStaff]
+
+    def get_queryset(self):
+        return User.objects.all().order_by("first_name", "last_name")
+
+
+class AdminUserSetStaffView(APIView):
+    """Staff-only: promote or demote a user's staff status.
+    Only a staff user can grant/revoke staff. A user cannot demote themselves.
+    """
+
+    permission_classes = [IsStaff]
+
+    def patch(self, request, user_id):
+        if request.user.id == user_id:
+            return Response(
+                {
+                    "detail": "Você não pode alterar seu próprio status de administrador."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        target = get_object_or_404(User, id=user_id)
+        is_staff = request.data.get("is_staff")
+        if not isinstance(is_staff, bool):
+            return Response(
+                {"detail": "Campo 'is_staff' é obrigatório e deve ser booleano."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        target.is_staff = is_staff
+        target.save(update_fields=["is_staff"])
+        return Response(UserSerializer(target, context={"request": request}).data)
+
+
+class AdminInviteTokenListCreateView(generics.ListCreateAPIView):
+    """Staff-only: list all invite tokens and create new ones."""
+
+    serializer_class = InviteTokenSerializer
+    permission_classes = [IsStaff]
+
+    def get_queryset(self):
+        return InviteToken.objects.select_related("created_by", "used_by").all()
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class AdminInviteTokenDeleteView(generics.DestroyAPIView):
+    """Staff-only: delete (revoke) an invite token."""
+
+    serializer_class = InviteTokenSerializer
+    permission_classes = [IsStaff]
+
+    def get_queryset(self):
+        return InviteToken.objects.all()
