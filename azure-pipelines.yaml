@@ -1,0 +1,36 @@
+trigger:
+  branches:
+    include:
+      - ci/dev
+      - ci/hlg
+      - ci/prod
+      - main
+ 
+resources:
+  repositories:
+    - repository: templates
+      type: github
+      name: devops-templates/devops-templates
+      ref: refs/heads/main
+      endpoint: pers-github-conn
+ 
+stages:
+- ${{ if contains(variables['Build.SourceBranch'], 'ci/dev') }}:
+  - template: ci/stages/common/StageScansScript.yml@templates
+    parameters:
+      siteName: $(Build.Repository.Name)
+ 
+- ${{ elseif contains(variables['Build.SourceBranch'], 'ci/hlg') }}:
+  - template: ci/stages/common/StageScansScript.yml@templates
+    parameters:
+      siteName: $(Build.Repository.Name)
+ 
+- ${{ elseif contains(variables['Build.SourceBranch'], 'ci/prod') }}:
+  - template: ci/stages/common/StageScansScript.yml@templates
+    parameters:
+      siteName: $(Build.Repository.Name)
+
+- ${{ elseif contains(variables['Build.SourceBranch'], 'main') }}:
+  - template: ci/stages/common/StageScansScript.yml@templates
+    parameters:
+      siteName: $(Build.Repository.Name)
