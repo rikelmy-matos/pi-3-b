@@ -10,7 +10,7 @@ registry: ghcr.io/rikelmy-matos/pi-3-b
 imagePullSecrets: []
 backend:
   image: backend
-  tag: sha-74705e7
+  tag: sha-bd8e1b4
   replicas: 1
   port: 8000
   media:
@@ -25,7 +25,7 @@ backend:
       memory: "512Mi"
 frontend:
   image: frontend
-  tag: sha-74705e7
+  tag: sha-bd8e1b4
   replicas: 1
   port: 8080
   resources:
