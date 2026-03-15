@@ -9,10 +9,9 @@ trigger:
 resources:
   repositories:
     - repository: templates
-      type: github
+      type: git
       name: devops-templates/devops-templates
       ref: refs/heads/main
-      endpoint: pers-github-conn
  
 stages:
 - ${{ if contains(variables['Build.SourceBranch'], 'ci/dev') }}:
