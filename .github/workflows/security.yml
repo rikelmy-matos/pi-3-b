@@ -1,0 +1,159 @@
+name: Security Scans
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write   # required for SARIF upload to GitHub code scanning
+  actions: read
+
+env:
+  REGISTRY: ghcr.io
+  REPO: rikelmy-matos/pi-3-b
+
+jobs:
+  # ── 1. SAST / Secrets / IaC ──────────────────────────────────────────────
+  sast-scans:
+    name: SAST, Secrets & IaC (Trivy · Semgrep · KICS · Gitleaks · MSDO)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Gitleaks needs full history for secrets scan
+
+      - name: Run repo scans
+        uses: rikelmy-matos/devops-templates/ci/stages/common/StageScansScript@main
+        with:
+          run-trivy: 'true'
+          run-semgrep: 'true'
+          semgrep-config: 'p/ci'
+          run-kics: 'true'
+          run-gitleaks: 'true'
+          run-msdo: 'true'
+
+  # ── 2. Container image scans (backend) ───────────────────────────────────
+  image-scan-backend:
+    name: Container Scan — Backend (Trivy · Grype)
+    runs-on: ubuntu-latest
+    needs: sast-scans
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Scan backend image
+        uses: rikelmy-matos/devops-templates/ci/stages/common/StageDockerfileScans@main
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          image: ${{ env.REPO }}/backend
+          tag: latest
+
+  # ── 3. Container image scans (frontend) ──────────────────────────────────
+  image-scan-frontend:
+    name: Container Scan — Frontend (Trivy · Grype)
+    runs-on: ubuntu-latest
+    needs: sast-scans
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Scan frontend image
+        uses: rikelmy-matos/devops-templates/ci/stages/common/StageDockerfileScans@main
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          image: ${{ env.REPO }}/frontend
+          tag: latest
+
+  # ── 4. SBOM — workspace ──────────────────────────────────────────────────
+  sbom-workspace:
+    name: SBOM — Workspace (Syft / CycloneDX)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate SBOM for workspace
+        uses: rikelmy-matos/devops-templates/ci/stages/common/StageScansSBOM@main
+        # dependency-track-url / dependency-track-api-key left empty on purpose
+        # (no Dependency-Track instance yet)
+
+  # ── 5. SBOM — backend image ──────────────────────────────────────────────
+  sbom-backend-image:
+    name: SBOM — Backend Image (Syft / CycloneDX)
+    runs-on: ubuntu-latest
+    needs: image-scan-backend
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate SBOM for backend image
+        uses: rikelmy-matos/devops-templates/ci/stages/common/StageScansSBOM@main
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.REPO }}/backend:latest
+          # dependency-track-url / dependency-track-api-key left empty on purpose
+
+  # ── 6. SBOM — frontend image ─────────────────────────────────────────────
+  sbom-frontend-image:
+    name: SBOM — Frontend Image (Syft / CycloneDX)
+    runs-on: ubuntu-latest
+    needs: image-scan-frontend
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate SBOM for frontend image
+        uses: rikelmy-matos/devops-templates/ci/stages/common/StageScansSBOM@main
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.REPO }}/frontend:latest
+          # dependency-track-url / dependency-track-api-key left empty on purpose
+
+  # ── 7. Consolidate all SARIF reports ─────────────────────────────────────
+  consolidate-sarif:
+    name: Consolidate SARIF Reports
+    runs-on: ubuntu-latest
+    needs:
+      - sast-scans
+      - image-scan-backend
+      - image-scan-frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all SARIF artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/sarif
+          merge-multiple: true
+
+      - name: Consolidate and upload SARIF bundle
+        uses: rikelmy-matos/devops-templates/ci/stages/common/StageConsolidateSarif@main
+        with:
+          search-glob: 'artifacts/sarif/**/*.sarif'
+          artifact-name: 'sarif-reports-pi-3-b'
